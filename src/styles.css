@@ -1,0 +1,60 @@
+:root {
+  --bg: #0f0d15;
+  --panel: #1a1726;
+  --border: #2c2740;
+  --text: #ece8f5;
+  --muted: #9c93b8;
+  --accent: #d96fb0;
+  --accent2: #7c6cf0;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+button.primary { background: linear-gradient(90deg, var(--accent), var(--accent2)); border: 0; color: #fff; }
+button:disabled { opacity: 0.5; cursor: default; }
+input, textarea {
+  font: inherit;
+  background: #110f1a;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+}
+a { color: var(--accent); }
+
+.app { max-width: 980px; margin: 0 auto; padding: 16px; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.brand { font-weight: 700; font-size: 20px; }
+.brand small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+.tabs { display: flex; gap: 8px; margin: 16px 0; }
+.tabs button.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.muted { color: var(--muted); font-size: 13px; }
+.card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #161320; }
+.card h4 { margin: 0 0 4px; }
+.pill { font-size: 12px; background: #231f33; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; color: var(--muted); }
+.center { display: grid; place-items: center; min-height: 100vh; }
+.login { width: 340px; }
+.spacer { flex: 1; }
+.msg { padding: 6px 10px; border-radius: 8px; background: #161320; margin-bottom: 6px; }
+.msg.mine { background: #2a2140; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.dot.on { background: #4ade80; } .dot.off { background: #f87171; }
+.error { color: #f87171; font-size: 13px; }
+.scroll { max-height: 380px; overflow-y: auto; }
