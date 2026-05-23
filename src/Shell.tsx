@@ -4,8 +4,19 @@ import Login from "./Login";
 import Feed from "./Feed";
 import Search from "./Search";
 import Chat from "./Chat";
+import Spaces from "./Spaces";
+import Connections from "./Connections";
+import Notifications from "./Notifications";
 
-type Tab = "feed" | "search" | "chat";
+type Tab = "feed" | "spaces" | "search" | "chat" | "connections" | "notifications";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "feed", label: "📰 Feed" },
+  { id: "spaces", label: "🏘️ Spaces" },
+  { id: "search", label: "🔍 Search" },
+  { id: "chat", label: "💬 Chat" },
+  { id: "connections", label: "🤝 Connections" },
+  { id: "notifications", label: "🔔 Inbox" },
+];
 
 export default function Shell() {
   const { initialized, accessToken, signOut } = useAuth();
@@ -26,16 +37,19 @@ export default function Shell() {
       </div>
 
       <div className="tabs">
-        {(["feed", "search", "chat"] as Tab[]).map((t) => (
-          <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
-            {t === "feed" ? "📰 Feed" : t === "search" ? "🔍 Search" : "💬 Chat"}
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+            {t.label}
           </button>
         ))}
       </div>
 
       {tab === "feed" && <Feed />}
+      {tab === "spaces" && <Spaces />}
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
+      {tab === "connections" && <Connections />}
+      {tab === "notifications" && <Notifications />}
     </div>
   );
 }
