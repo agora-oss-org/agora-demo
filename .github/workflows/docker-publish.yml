@@ -1,0 +1,88 @@
+name: Build and publish image
+
+# Builds the dev-container image and pushes it to GitHub Container Registry and Docker Hub.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   DOCKERHUB_USERNAME  — a Docker Hub account/robot with push access to agoraserver/agora-demo
+#   DOCKERHUB_TOKEN     — a Docker Hub access token (not the password)
+# GHCR uses the built-in GITHUB_TOKEN (no secret needed).
+
+on:
+  push:
+    branches: [root]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Don't run duplicate builds for the same ref; cancel the older one.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GHCR_IMAGE: ghcr.io/${{ github.repository }}        # ghcr.io/jenova-marie/agora-demo
+  DOCKERHUB_IMAGE: docker.io/agoraserver/agora-demo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Pulls VITE_* from the `production` environment (variables + the VITE_DEMO_PASSWORD secret).
+    environment: production
+    permissions:
+      contents: read
+      packages: write       # push to GHCR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_IMAGE }}
+            ${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # VITE_* are inlined into the bundle at build time. Sourced from the `production`
+          # environment so they live in repo settings, not in this file. NOTE: the resulting image
+          # is public, so these values (including the demo password) are readable from the image —
+          # they are non-secret demo credentials.
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_PROJECT_ID=${{ vars.VITE_PROJECT_ID }}
+            VITE_DEMO_EMAIL=${{ vars.VITE_DEMO_EMAIL }}
+            VITE_DEMO_PASSWORD=${{ secrets.VITE_DEMO_PASSWORD }}
