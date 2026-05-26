@@ -35,7 +35,7 @@ export default function Search() {
             style={isEntity ? { cursor: "pointer" } : undefined}
           >
             <h4>{r.record?.title || "(untitled)"}</h4>
-            <div>{r.record?.content}</div>
+            <div className="clamp3">{r.record?.content}</div>
             <div className="row" style={{ marginTop: 6 }}>
               <span className="muted">
                 <span className="pill">{r.sourceType}</span> similarity {Number(r.similarity).toFixed(3)}

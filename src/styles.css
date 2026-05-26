@@ -60,3 +60,14 @@ a { color: var(--accent); }
 .dot.on { background: #4ade80; } .dot.off { background: #f87171; }
 .error { color: #f87171; font-size: 13px; }
 .scroll { max-height: 380px; overflow-y: auto; }
+/* Preserve newlines + wrap long unbroken strings so full bodies render. */
+.prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Same, but clamp list/card previews to 3 lines. */
+.clamp3 {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

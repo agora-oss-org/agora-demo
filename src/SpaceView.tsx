@@ -99,7 +99,7 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
       {(ents.entities ?? []).map((e: any) => (
         <div key={e.id} className="card" onClick={() => setSelectedEntity(e.id)} style={{ cursor: "pointer" }}>
           <h4>{e.title || "(untitled)"}</h4>
-          <div>{e.content}</div>
+          <div className="clamp3">{e.content}</div>
           <div className="row" style={{ marginTop: 8 }}>
             <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
             <span className="pill">💬 {e.repliesCount ?? 0}</span>
