@@ -1,0 +1,16 @@
+# Keep the build context small and avoid leaking host-local config into the image.
+node_modules
+dist
+.git
+.gitignore
+*.log
+.DS_Store
+# Local env stays on the host — the container takes VITE_* from build args / runtime env instead.
+.env
+*.tsbuildinfo
+.claude
+Dockerfile
+.dockerignore
+docker-compose.yml
+README.md
+CLAUDE.md
