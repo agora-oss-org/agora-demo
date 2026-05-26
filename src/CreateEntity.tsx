@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCreateEntity } from "@agora/react-js";
+import { useCreateEntity } from "@agora-sdk/react-js";
 
 // Standalone "create an entity" form, routed to from the Feed (and from inside a space).
 // Uses useCreateEntity (→ POST /v7/:project/entities), which takes an optional `spaceId` so the

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EntityProvider, useEntity, useUser, useReactionToggle, useCommentSectionData } from "@agora/react-js";
+import { EntityProvider, useEntity, useUser, useReactionToggle, useCommentSectionData } from "@agora-sdk/react-js";
 
 export default function EntityView({
   entityId,

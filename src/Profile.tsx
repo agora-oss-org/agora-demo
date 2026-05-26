@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUser } from "@agora/react-js";
+import { useUser } from "@agora-sdk/react-js";
 
 // Edit the current user's profile via useUser().updateUser → PATCH /users/:id (self-only on the
 // server). Exercises the user-update SDK surface. The header shows @username, falling back to name,

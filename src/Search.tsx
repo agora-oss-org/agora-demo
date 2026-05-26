@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchContent } from "@agora/react-js";
+import { useSearchContent } from "@agora-sdk/react-js";
 import EntityView from "./EntityView";
 
 // Semantic search via the SDK's useSearchContent → POST /v7/:project/search/content (Voyage + pgvector).

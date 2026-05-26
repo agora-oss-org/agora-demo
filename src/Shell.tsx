@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth, useUser } from "@agora/react-js";
+import { useAuth, useUser } from "@agora-sdk/react-js";
 import Login from "./Login";
 import Feed from "./Feed";
 import Search from "./Search";

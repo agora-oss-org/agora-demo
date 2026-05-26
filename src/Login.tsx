@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@agora/react-js";
+import { useAuth } from "@agora-sdk/react-js";
 
 // Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens).
 export default function Login() {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSpaceList } from "@agora/react-js";
+import { useSpaceList } from "@agora-sdk/react-js";
 import SpaceView from "./SpaceView";
 
 // Browses top-level spaces (→ GET /v7/:project/spaces with no parent = top-level) and creates them.

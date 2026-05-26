@@ -8,7 +8,7 @@ import {
   useConversationMembers,
   ConversationProvider,
   useConversationContext,
-} from "@agora/react-js";
+} from "@agora-sdk/react-js";
 
 // Realtime chat. The list comes from useConversations; the open thread is wrapped in
 // ConversationProvider, which (a) joins the socket.io room so message:created events arrive live

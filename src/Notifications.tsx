@@ -1,4 +1,4 @@
-import { useAppNotifications } from "@agora/react-js";
+import { useAppNotifications } from "@agora-sdk/react-js";
 
 // In-app notification inbox via useAppNotifications (→ /v7/:project/app-notifications).
 export default function Notifications() {

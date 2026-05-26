@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSpaceList, useEntityList } from "@agora/react-js";
+import { useSpaceList, useEntityList } from "@agora-sdk/react-js";
 import EntityView from "./EntityView";
 import CreateEntity from "./CreateEntity";
 

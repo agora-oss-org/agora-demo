@@ -1,4 +1,4 @@
-import { ReplykeProvider, ChatProvider } from "@agora/react-js";
+import { ReplykeProvider, ChatProvider } from "@agora-sdk/react-js";
 import Shell from "./Shell";
 
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID;

@@ -3,7 +3,7 @@ import {
   useFetchConnections, useFetchReceivedPendingConnections, useFetchSentPendingConnections,
   useAcceptConnection, useDeclineConnection, useRequestConnection, useRemoveConnection,
   useFetchUserByUsername, useSearchUsers, useUser,
-} from "@agora/react-js";
+} from "@agora-sdk/react-js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
