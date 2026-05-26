@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A standalone Vite + React (TypeScript) app that drives the **real `@agora` SDK hooks** against a
-running Agora server. It is a **1:1 compatibility proof / manual test harness** for the forked SDK,
-not a product. Every feature tab exists to exercise one SDK surface end-to-end (auth, feed,
-comments, reactions, spaces, semantic search, live socket.io chat, connections, notifications).
+A standalone Vite + React (TypeScript) app that drives the **real Agora SDK hooks**
+(`@agora-sdk/react-js` + `@agora-sdk/core`) against a running Agora server. It is a **1:1
+compatibility proof / manual test harness** for the SDK, not a product. Every feature tab exists to
+exercise one SDK surface end-to-end (auth, profile editing, feed + image uploads, comments,
+reactions, inline entity edit, nested spaces, semantic search, live socket.io chat + DMs,
+connections, notifications).
 
 When something breaks here it usually means a server↔SDK contract mismatch, not an app bug (e.g.
 GET-vs-POST shape mismatches, `null` optional fields rejected by create endpoints, `sourceId=null`
@@ -68,21 +70,25 @@ The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parse
 connection) → `Shell.tsx`.
 
 `Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
-authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels.
-There is no router library — tabs are conditional renders.
+authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
+(Feed, Spaces, Search, Chat, Connections, Inbox, Me). There is no router library — tabs, and
+drill-downs within a tab (entity detail, space detail, create forms), are all conditional renders
+swapped via local state.
 
-Each feature file maps to one SDK hook (and the server route it hits, noted in each file's header
-comment):
+Each feature file maps to one SDK surface (and the server route it hits, noted in each file's
+header comment):
 
-| File | SDK hook(s) | Exercises |
-|------|-------------|-----------|
-| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`) | `/auth` |
-| `Feed.tsx` | `useEntityList` | list/create entities |
-| `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: reactions + comments |
-| `Spaces.tsx` | `useSpaceList` | spaces |
-| `Search.tsx` | `useSearchContent` | semantic search (POST `/search/content`) |
-| `Chat.tsx` | `useConversations`, `useConversationData`, `useChatContext` | realtime socket.io chat |
-| `Connections.tsx` | `useFetchConnections`, `useRequestConnection`, `useAcceptConnection`, … | friend requests |
+| File | SDK hook(s) / provider | Exercises |
+|------|------------------------|-----------|
+| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`, `signUpWithEmailAndPassword`) | `/auth`; handles the email-confirmation sign-up flow |
+| `Profile.tsx` | `useUser().updateUser` | edit own username/name/bio/avatar (PATCH `/users/:id`) |
+| `Feed.tsx` | `useEntityList` | list entities; routes to `CreateEntity` / `EntityView` |
+| `CreateEntity.tsx` | `useCreateEntity` | create an entity, optional `spaceId` + multipart image upload |
+| `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
+| `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList` | top-level spaces, then recurse into subspaces + space-scoped entries |
+| `Search.tsx` | `useSearchContent` | semantic search (POST `/search/content`); entity hits open in `EntityView` |
+| `Chat.tsx` | `useConversations`, `ConversationProvider` + `useConversationContext`, `useChatContext`, `useCreateDirectConversation`, `useConversationMembers` | realtime socket.io chat: groups + DMs |
+| `Connections.tsx` | `useFetchConnections`/`…SentPending…`/`…ReceivedPending…`, `useRequestConnection`, `useAcceptConnection`, `useSearchUsers` | connections: typeahead request, sent/received pending, accept/decline/cancel |
 | `Notifications.tsx` | `useAppNotifications` | in-app inbox |
 
 ### Conventions to match when editing
@@ -93,6 +99,11 @@ comment):
   (server) until a refetch folds them together — see the comment in `EntityView.tsx`. Mirror this
   pattern for any other optimistic list.
 - Chat messages come newest-first from the SDK; `Conversation` reverses them for display and
-  compares `m.userId === user?.id` to style "mine".
+  compares `m.userId === user?.id` to style "mine". The open thread is wrapped in
+  `ConversationProvider` (keyed by id so switching re-joins the socket room).
+- Images: uploaded entity files render via the exported `fileImageSrc(file)` helper in
+  `EntityView.tsx` (picks medium → original variant). Reuse it for any new image display.
+- Connections aren't realtime (the socket layer is chat-only), so `Connections.tsx` polls on an
+  interval to surface accepted/incoming requests.
 - Styling is one hand-written `styles.css` with utility-ish classes (`col`, `row`, `panel`, `card`,
-  `pill`, `msg`, `mine`, `muted`, `spacer`). No CSS framework.
+  `pill`, `msg`, `mine`, `muted`, `spacer`, `prewrap`, `clamp3`, `linklike`). No CSS framework.

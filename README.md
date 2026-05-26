@@ -1,33 +1,61 @@
 # Agora demo
 
-A standalone Vite + React app that drives the real **Agora SDK** hooks (`@agora-sdk/react-js` +
-`@agora-sdk/core`) against a running Agora server — the 1:1 compatibility proof. Auth, feed,
-comments, reactions, profiles, spaces, semantic search, connections, and live socket.io chat all
-go through the SDK.
+A standalone **Vite + React (TypeScript)** app that drives the real Agora SDK hooks
+(`@agora-sdk/react-js` + `@agora-sdk/core`) against a running Agora server. It's a 1:1
+compatibility harness — every tab exercises one SDK surface end-to-end, so if something breaks here
+it usually points at a server ↔ SDK contract mismatch rather than an app bug.
 
-## Run (local)
+## What it exercises
+
+| Tab | Surface |
+|-----|---------|
+| **Feed** | List/create entities, with optional image uploads |
+| *(entity)* | Open an entity for image display, reactions, comments (per-comment upvotes), and owner inline edit |
+| **Spaces** | Browse top-level spaces, then drill into subspaces and space-scoped entries |
+| **Search** | Semantic search (Voyage + pgvector); entity results open in place |
+| **Chat** | Realtime socket.io chat — groups and direct messages (open two tabs for live delivery) |
+| **Connections** | Typeahead user search, send/accept/decline/cancel connection requests |
+| **Inbox** | In-app notifications |
+| **Me** | Edit your profile (username, name, bio, avatar) |
+
+Auth is email/password against the server's `/auth` (Supabase-backed identity, Agora tokens),
+including the email-confirmation sign-up flow.
+
+## Quick start (local)
+
+You need a running Agora server. The demo defaults to the deployed one; for local work point it at
+your server via `.env`.
 
 ```bash
 # 1. Boot the Agora server (separate terminal)
-cd ../agora/server && npm run dev          # http://localhost:4000/v7
+cd ../agora/server && npm run dev                       # http://localhost:4000/v7
 
 # 2. Seed a confirmed demo user (once)
 cd ../agora/server && node scripts/seed-demo-user.mjs   # agora-demo@gmail.com / DemoPass123!
 
 # 3. Run the demo
 npm install
-npm run dev                                 # http://localhost:5173
+npm run dev                                             # http://localhost:5173
 ```
 
-Configure the target via `.env` (`VITE_API_BASE_URL`, `VITE_PROJECT_ID`). Sign in with the seeded
-creds (prefilled). Tabs: **Feed** (list/create entities, image upload), open an entity for
-**comments + reactions + inline edit**, **Spaces** (nested), **Search** (semantic), **Chat**
-(open two tabs for live delivery), **Connections**, **Inbox**, **Me** (profile).
+Login is prefilled from `.env`. Scripts: `npm run dev` (dev server), `npm run build` (`tsc -b`
+typecheck + `vite build`), `npm run preview` (serve the build). There are no tests or linter —
+verification is manual; `tsc -b` in the build is the only static check.
 
-## Run (Docker)
+### Configuration (`.env`)
 
-The app pulls the SDK from npm, so the container build is self-contained — no sibling dir needed.
-It runs the Vite dev server (with HMR) on port 5173.
+| Var | Purpose |
+|-----|---------|
+| `VITE_API_BASE_URL` | Agora server base URL (e.g. `http://localhost:4000/v7`) |
+| `VITE_PROJECT_ID` | Project id passed to `ReplykeProvider` |
+| `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` | Prefilled login credentials |
+
+`VITE_API_BASE_URL` is parsed in `App.tsx` and passed to `ReplykeProvider` via its `baseUrl` prop.
+
+## Docker
+
+The SDK comes from npm, so the build context is self-contained (no sibling dir). The image runs the
+Vite dev server (HMR) on port 5173.
 
 ```bash
 docker compose up --build                   # http://localhost:5173
@@ -43,10 +71,10 @@ docker build -t agora-demo:dev .
 docker run --rm -p 5173:5173 -e VITE_API_BASE_URL=https://agora.recoverysky.net/v7 agora-demo:dev
 ```
 
-`VITE_*` values are baked into the image from build args (see the `Dockerfile`) and can be
-overridden per-run via `-e` / compose `environment:` — Vite reads them when the dev server starts,
-so no rebuild is needed to switch servers. `docker compose` also bind-mounts the source for HMR
-while keeping the image's `node_modules` (so the host's aren't required).
+`VITE_*` are baked into the image from build args (`Dockerfile`) and overridable per run via `-e` /
+compose `environment:` — Vite reads them when the dev server starts, so switching servers needs no
+rebuild. `docker compose` also bind-mounts the source for HMR while keeping the image's
+`node_modules` (so the host's aren't required).
 
 ### Published images
 
@@ -58,10 +86,10 @@ docker run --rm -p 5173:5173 ghcr.io/jenova-marie/agora-demo:latest
 docker run --rm -p 5173:5173 agoraserver/agora-demo:latest
 ```
 
-The baked `VITE_*` values come from the repo's **`production` GitHub Environment** — variables
-`VITE_API_BASE_URL` / `VITE_PROJECT_ID` / `VITE_DEMO_EMAIL` and the secret `VITE_DEMO_PASSWORD` —
-passed in as build args (so they live in repo settings, not in the workflow file). These are
-non-secret demo credentials; since the published image is public, they're readable from it anyway.
+The baked `VITE_*` come from the repo's **`production` GitHub Environment** — variables
+`VITE_API_BASE_URL` / `VITE_PROJECT_ID` / `VITE_DEMO_EMAIL` plus the secret `VITE_DEMO_PASSWORD`,
+passed as build args (so they live in repo settings, not the workflow file). These are non-secret
+demo credentials; since the published image is public, they're readable from it anyway.
 
 GHCR auth uses the built-in `GITHUB_TOKEN`. Docker Hub needs repo secrets `DOCKERHUB_USERNAME` and
 `DOCKERHUB_TOKEN` (an access token with push access to `agoraserver/agora-demo`).
@@ -69,9 +97,18 @@ GHCR auth uses the built-in `GITHUB_TOKEN`. Docker Hub needs repo secrets `DOCKE
 ## How it consumes the SDK
 
 The SDK is published to npm as `@agora-sdk/core` + `@agora-sdk/react-js` and listed as normal
-dependencies, so the build is fully self-contained (and containerizable). `vite.config.ts` dedupes
-React to a single instance shared with the SDK. The server base URL is passed to `ReplykeProvider`
-via the `baseUrl` prop (`App.tsx` parses `VITE_API_BASE_URL`).
+dependencies, so the build is fully self-contained (and containerizable). `vite.config.ts` only
+**dedupes** React/Redux to a single instance shared with the SDK — otherwise the SDK's hooks break.
 
-To test against a **local SDK fork** instead, alias the package names at the fork's built `dist/esm`
-in `vite.config.ts` (see the comment there) and rebuild the fork after editing it.
+To test against a **local SDK fork** instead, add a `resolve.alias` in `vite.config.ts` mapping the
+package names to the fork's built `dist/esm/index.js` (there's a commented example in the file), and
+rebuild the fork (`pnpm build-all`) after editing it.
+
+## Architecture
+
+`main.tsx` → `App.tsx` (`ReplykeProvider` with `projectId` + `baseUrl`, then `ChatProvider` for the
+socket.io connection) → `Shell.tsx`. `Shell` is the auth gate and tab router; there's no router
+library — tabs and in-tab drill-downs are conditional renders driven by local state. Styling is one
+hand-written `styles.css` (utility-ish classes, no framework).
+
+See [CLAUDE.md](./CLAUDE.md) for the per-file SDK-surface map and editing conventions.
