@@ -53,6 +53,33 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
   );
 }
 
+// A single comment with its own upvote toggle (→ POST/DELETE /comments/:id/reactions).
+function CommentRow({ comment }: { comment: any }) {
+  const isReal = /^[0-9a-f-]{36}$/i.test(comment.id); // optimistic temp comments have a short id
+  const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
+    targetType: "comment",
+    targetId: comment.id,
+    initialReaction: comment.userReaction ?? null,
+    initialReactionCounts: comment.reactionCounts,
+  }) as any;
+  return (
+    <div className="msg">
+      <div className="prewrap">{comment.content}</div>
+      <div className="row" style={{ marginTop: 4 }}>
+        <button
+          className={currentReaction === "upvote" ? "primary" : ""}
+          disabled={loading || !isReal}
+          onClick={() => toggleReaction({ reactionType: "upvote" })}
+          style={{ padding: "2px 8px", fontSize: 12 }}
+        >
+          ⬆ {reactionCounts?.upvote ?? 0}
+        </button>
+        <span className="muted">{new Date(comment.createdAt).toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
+
 function Comments({ entityId }: { entityId: string }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
   const { comments, newComments, loading, createComment, loadMore, hasMore } = cs;
@@ -73,16 +100,23 @@ function Comments({ entityId }: { entityId: string }) {
   return (
     <div className="panel col">
       <strong>Comments {loading ? "…" : `(${all.length})`}</strong>
-      <div className="row">
-        <input placeholder="add a comment" value={text} onChange={(e) => setText(e.target.value)} />
-        <button className="primary" disabled={busy} onClick={post}>Post</button>
+      <div className="col">
+        <textarea
+          placeholder="add a comment"
+          rows={3}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") post(); }}
+        />
+        <div className="row">
+          <span className="muted">⌘/Ctrl + Enter to post</span>
+          <span className="spacer" />
+          <button className="primary" disabled={busy} onClick={post}>Post</button>
+        </div>
       </div>
       <div className="scroll col">
         {all.map((c: any) => (
-          <div key={c.id} className="msg">
-            <div>{c.content}</div>
-            <div className="muted">⬆ {c.reactionCounts?.upvote ?? 0} · {new Date(c.createdAt).toLocaleString()}</div>
-          </div>
+          <CommentRow key={c.id} comment={c} />
         ))}
       </div>
       {hasMore && <button onClick={() => loadMore()}>Load more</button>}
