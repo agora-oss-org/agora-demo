@@ -22,6 +22,10 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
+    // Allow the proxied hostname Caddy serves this dev server under. A leading dot matches the
+    // domain and all subdomains, so this covers agora-demo.intra.recoverysky.net and any future
+    // intra route. localhost/127.0.0.1 are always allowed implicitly.
+    allowedHosts: [".intra.recoverysky.net"],
   },
   resolve: {
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
