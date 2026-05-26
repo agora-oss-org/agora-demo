@@ -1,40 +1,38 @@
 import { useEffect, useState } from "react";
 import { useEntityList } from "@agora/react-js";
 import EntityView from "./EntityView";
+import CreateEntity from "./CreateEntity";
 
-// Lists entities via useEntityList (→ GET /v7/:project/entities) and creates new ones.
+// Lists entities via useEntityList (→ GET /v7/:project/entities). Creating a new entity is now its
+// own routed form (CreateEntity), reached via the "New post" button.
 export default function Feed() {
   const list = useEntityList({ listId: "demo-feed" }) as any;
-  const { entities, loading, hasMore, fetchEntities, loadMore, createEntity } = list;
+  const { entities, loading, hasMore, fetchEntities, loadMore } = list;
   const [selected, setSelected] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const refresh = () => fetchEntities({}, undefined, { limit: 20 });
 
   useEffect(() => {
-    fetchEntities({}, undefined, { limit: 20 });
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const create = async () => {
-    if (!content.trim() && !title.trim()) return;
-    setBusy(true);
-    try {
-      await createEntity({ title: title || undefined, content: content || undefined });
-      setTitle(""); setContent("");
-      fetchEntities({}, undefined, { limit: 20 });
-    } finally { setBusy(false); }
-  };
-
-  if (selected) return <EntityView entityId={selected} onBack={() => setSelected(null)} />;
+  if (selected) return <EntityView entityId={selected} onBack={() => setSelected(null)} backLabel="← back to feed" />;
+  if (creating)
+    return (
+      <CreateEntity
+        onCancel={() => setCreating(false)}
+        onDone={() => { setCreating(false); refresh(); }}
+      />
+    );
 
   return (
     <div className="col">
-      <div className="panel col">
-        <strong>Create an entity</strong>
-        <input placeholder="title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <textarea placeholder="what's on your mind?" rows={2} value={content} onChange={(e) => setContent(e.target.value)} />
-        <div className="row"><span className="spacer" /><button className="primary" disabled={busy} onClick={create}>Post</button></div>
+      <div className="row">
+        <strong>Feed</strong>
+        <span className="spacer" />
+        <button className="primary" onClick={() => setCreating(true)}>➕ New post</button>
       </div>
 
       <div className="muted">{loading ? "Loading…" : `${entities?.length ?? 0} entities`}</div>

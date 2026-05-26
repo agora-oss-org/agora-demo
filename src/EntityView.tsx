@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { EntityProvider, useEntity, useReactionToggle, useCommentSectionData } from "@agora/react-js";
 
-export default function EntityView({ entityId, onBack }: { entityId: string; onBack: () => void }) {
+export default function EntityView({
+  entityId,
+  onBack,
+  backLabel = "← back",
+}: {
+  entityId: string;
+  onBack: () => void;
+  backLabel?: string;
+}) {
   return (
     <EntityProvider entityId={entityId}>
-      <Inner onBack={onBack} entityId={entityId} />
+      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} />
     </EntityProvider>
   );
 }
 
-function Inner({ entityId, onBack }: { entityId: string; onBack: () => void }) {
+function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () => void; backLabel: string }) {
   const { entity } = useEntity() as any;
   return (
     <div className="col">
-      <button onClick={onBack}>← back to feed</button>
+      <button onClick={onBack}>{backLabel}</button>
       <div className="panel col">
         <h3 style={{ margin: 0 }}>{entity?.title || "(untitled)"}</h3>
         <div>{entity?.content}</div>
@@ -47,7 +55,7 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
 
 function Comments({ entityId }: { entityId: string }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
-  const { comments, loading, createComment, loadMore, hasMore } = cs;
+  const { comments, newComments, loading, createComment, loadMore, hasMore } = cs;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -57,15 +65,20 @@ function Comments({ entityId }: { entityId: string }) {
     try { await createComment({ content: text }); setText(""); } finally { setBusy(false); }
   };
 
+  // The SDK keeps optimistically-added comments (the ones you just posted) in a separate
+  // `newComments` array until the next refetch folds them into `comments`. Render both, with
+  // the freshly-posted ones on top, so a new comment shows immediately.
+  const all = [...((newComments as any[]) ?? []), ...((comments as any[]) ?? [])];
+
   return (
     <div className="panel col">
-      <strong>Comments {loading ? "…" : `(${comments?.length ?? 0})`}</strong>
+      <strong>Comments {loading ? "…" : `(${all.length})`}</strong>
       <div className="row">
         <input placeholder="add a comment" value={text} onChange={(e) => setText(e.target.value)} />
         <button className="primary" disabled={busy} onClick={post}>Post</button>
       </div>
       <div className="scroll col">
-        {(comments ?? []).map((c: any) => (
+        {all.map((c: any) => (
           <div key={c.id} className="msg">
             <div>{c.content}</div>
             <div className="muted">⬆ {c.reactionCounts?.upvote ?? 0} · {new Date(c.createdAt).toLocaleString()}</div>
