@@ -9,19 +9,51 @@ export default function Login() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Set after a sign-up that needs email confirmation — show "check your email" instead of an error.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const submit = async () => {
     setBusy(true);
     setErr(null);
     try {
-      if (mode === "in") await signInWithEmailAndPassword({ email, password });
-      else await signUpWithEmailAndPassword({ email, password });
+      if (mode === "in") {
+        await signInWithEmailAndPassword({ email, password });
+      } else {
+        const res = await signUpWithEmailAndPassword({ email, password });
+        // With email confirmation enabled the user is created but NOT signed in yet — they must
+        // click the link in their inbox, then sign in. (status === "signed_in" means auto-confirm
+        // is on and they're already in, so we just fall through and the auth gate renders the app.)
+        if (res?.status === "confirmation_required") setPendingEmail(res.email);
+      }
     } catch (e: any) {
       setErr(e?.response?.data?.error || e?.message || "Authentication failed");
     } finally {
       setBusy(false);
     }
   };
+
+  // Post-sign-up confirmation screen.
+  if (pendingEmail) {
+    return (
+      <div className="panel login col">
+        <div className="brand">📬 Check your email</div>
+        <div className="muted">
+          We sent a confirmation link to <code>{pendingEmail}</code>. Click it to activate your
+          account (check spam too), then come back and sign in.
+        </div>
+        <button
+          className="primary"
+          onClick={() => {
+            setPendingEmail(null);
+            setMode("in");
+            setErr(null);
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="panel login col">
