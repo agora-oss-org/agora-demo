@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
-  useFetchConnections, useFetchReceivedPendingConnections,
-  useAcceptConnection, useDeclineConnection, useRequestConnection,
-  useFetchUserByUsername,
+  useFetchConnections, useFetchReceivedPendingConnections, useFetchSentPendingConnections,
+  useAcceptConnection, useDeclineConnection, useRequestConnection, useRemoveConnection,
+  useFetchUserByUsername, useSearchUsers, useUser,
 } from "@agora/react-js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -12,20 +12,42 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export default function Connections() {
   const fetchConnections = useFetchConnections() as any;
   const fetchPending = useFetchReceivedPendingConnections() as any;
+  const fetchSent = useFetchSentPendingConnections() as any;
   const accept = useAcceptConnection() as any;
   const decline = useDeclineConnection() as any;
+  const remove = useRemoveConnection() as any;
   const request = useRequestConnection() as any;
   const fetchUserByUsername = useFetchUserByUsername() as any;
+  const userSearch = useSearchUsers() as any;
+  const { user: me } = useUser() as any;
 
   const [established, setEstablished] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
+  const [sent, setSent] = useState<any[]>([]);
   const [userId, setUserId] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // Typeahead: debounce the input and search users by username/name prefix (→ POST /search/users).
+  // Skip while a result is already selected (the input holds the chosen @username then).
+  useEffect(() => {
+    const q = userId.trim().replace(/^@/, "");
+    if (selectedId || q.length < 1 || UUID_RE.test(userId.trim())) {
+      userSearch.reset?.();
+      setShowResults(false);
+      return;
+    }
+    const t = setTimeout(() => { userSearch.search({ query: q, limit: 8 }); setShowResults(true); }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, selectedId]);
 
   const refresh = async () => {
     try {
       const c = await fetchConnections({}); setEstablished(c?.data ?? []);
       const p = await fetchPending({}); setPending(p?.data ?? []);
+      const s = await fetchSent({}); setSent(s?.data ?? []);
     } catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
   };
   // Connections aren't realtime (Replyke's socket layer is chat-only), so the other party
@@ -38,19 +60,27 @@ export default function Connections() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const pickUser = (u: any) => {
+    setUserId("@" + (u.username || u.id));
+    setSelectedId(u.id);
+    setShowResults(false);
+    userSearch.reset?.();
+  };
+
   const doRequest = async () => {
     const input = userId.trim();
-    if (!input) return;
+    if (!input && !selectedId) return;
     try {
-      // Accept a raw UUID or a @username — resolve the username to an id first (the server's
-      // connection request is keyed by user id, per the SDK/Replyke contract).
-      let targetId = input;
-      if (!UUID_RE.test(input)) {
+      // A typeahead pick gives us the id directly. Otherwise accept a raw UUID or a @username —
+      // resolve the username to an id first (the connection request is keyed by user id).
+      let targetId = selectedId || input;
+      if (!selectedId && !UUID_RE.test(input)) {
         const u = await fetchUserByUsername({ username: input.replace(/^@/, "") });
         targetId = u.id;
       }
       await request({ userId: targetId, message: "Hi from the Agora demo!" });
-      setUserId(""); setMsg("✓ request sent"); refresh();
+      setUserId(""); setSelectedId(null); setShowResults(false); userSearch.reset?.();
+      setMsg("✓ request sent"); refresh();
     } catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
   };
 
@@ -59,9 +89,40 @@ export default function Connections() {
       <div className="panel col">
         <strong>Request a connection</strong>
         <div className="row">
-          <input placeholder="@username or user id" value={userId} onChange={(e) => setUserId(e.target.value)} />
+          <input
+            placeholder="@username or user id"
+            value={userId}
+            onChange={(e) => { setUserId(e.target.value); setSelectedId(null); }}
+            onKeyDown={(e) => { if (e.key === "Enter") doRequest(); }}
+          />
           <button className="primary" onClick={doRequest}>Request</button>
         </div>
+
+        {showResults && !selectedId && (
+          <div className="col" style={{ gap: 4 }}>
+            {userSearch.loading && <div className="muted">searching…</div>}
+            {!userSearch.loading && (userSearch.results?.length ?? 0) === 0 && (
+              <div className="muted">no users match</div>
+            )}
+            {(userSearch.results ?? [])
+              .map((r: any) => r.record)
+              .filter((u: any) => u && u.id !== me?.id)
+              .map((u: any) => (
+                <div
+                  key={u.id}
+                  className="card row"
+                  style={{ cursor: "pointer", marginBottom: 0 }}
+                  onClick={() => pickUser(u)}
+                >
+                  <span>@{u.username || u.id.slice(0, 8)}</span>
+                  {u.name && <span className="muted">{u.name}</span>}
+                  <span className="spacer" />
+                  <span className="muted">select →</span>
+                </div>
+              ))}
+          </div>
+        )}
+        {selectedId && <div className="muted">will request {userId}</div>}
         {msg && <div className="muted">{msg}</div>}
       </div>
 
@@ -76,6 +137,18 @@ export default function Connections() {
           </div>
         ))}
         {pending.length === 0 && <div className="muted">none</div>}
+      </div>
+
+      <div className="panel col">
+        <strong>Pending requests (sent) — {sent.length}</strong>
+        {sent.map((p) => (
+          <div key={p.id} className="card row">
+            <span>→ @{p.user?.username || p.user?.id?.slice(0, 8)}{p.message ? `: "${p.message}"` : ""}</span>
+            <span className="spacer" />
+            <button onClick={async () => { await remove({ connectionId: p.id }); refresh(); }}>Cancel</button>
+          </div>
+        ))}
+        {sent.length === 0 && <div className="muted">none</div>}
       </div>
 
       <div className="panel col">
