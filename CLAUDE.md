@@ -9,8 +9,9 @@ running Agora server. It is a **1:1 compatibility proof / manual test harness** 
 not a product. Every feature tab exists to exercise one SDK surface end-to-end (auth, feed,
 comments, reactions, spaces, semantic search, live socket.io chat, connections, notifications).
 
-When something breaks here it usually means a server↔SDK contract mismatch, not an app bug — see
-the four already-fixed mismatches documented in `README.md` ("What this demo flushed out").
+When something breaks here it usually means a server↔SDK contract mismatch, not an app bug (e.g.
+GET-vs-POST shape mismatches, `null` optional fields rejected by create endpoints, `sourceId=null`
+treated as a literal filter) — check the server route against what the SDK actually sends.
 
 ## Commands
 
@@ -23,28 +24,40 @@ npm run preview   # serve the production build
 There are **no tests and no linter** — verification is manual, by clicking through the tabs. The
 build's `tsc -b` is the only static check.
 
-### Full local stack (the demo needs the SDK + server running)
+### Local stack (the demo needs an Agora server running)
 
 ```bash
-cd ../agora-sdk && pnpm build-all                       # 1. build the local SDK fork (rerun after editing it)
-cd ../agora/server && npm run dev                       # 2. boot Agora server (separate terminal)
-cd ../agora/server && node scripts/seed-demo-user.mjs   # 3. seed demo user (once)
-npm run dev                                             # 4. run this demo
+cd ../agora/server && npm run dev                       # 1. boot Agora server (separate terminal)
+cd ../agora/server && node scripts/seed-demo-user.mjs   # 2. seed demo user (once)
+npm install && npm run dev                              # 3. run this demo
 ```
 
 Login is prefilled from `.env` (`VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD`). By default `.env`
 points `VITE_API_BASE_URL` at the **deployed** server (`https://agora.recoverysky.net/v7`); point
 it at `http://localhost:4000/v7` to test against a local server.
 
-## How the SDK is linked (critical to understand)
+### Docker
 
-`@agora/*` is an **unpublished local fork** at `../agora-sdk/packages`. `vite.config.ts` makes it
-work:
-- **Aliases** `@agora/core` and `@agora/react-js` to the SDK's built `dist/esm/index.js`. This
-  sidesteps the `workspace:*` internal dep and the SDK's extensionless ESM imports.
-- **Dedupes** `react`, `react-dom`, `react-redux`, `@reduxjs/toolkit` so the SDK shares the app's
-  single React/Redux instance (otherwise hooks break).
-- You **must `pnpm build-all` the SDK after editing it** — the demo consumes built output, not source.
+```bash
+docker compose up --build     # Vite dev container (HMR) → http://localhost:5173
+```
+
+Dev container only (no nginx/prod image). `VITE_*` are baked from build args and overridable at
+runtime via `-e` / compose `environment:` (Vite reads them at dev-server start). Use
+`VITE_API_BASE_URL=http://host.docker.internal:4000/v7` to reach a server on the host. The build is
+self-contained because the SDK comes from npm (below) — no sibling dir in the build context.
+
+## How the SDK is consumed (critical to understand)
+
+The SDK is the **published npm packages** `@agora-sdk/core` + `@agora-sdk/react-js` (normal
+`dependencies`). Source imports them by their real names. `vite.config.ts` only **dedupes**
+`react`, `react-dom`, `react-redux`, `@reduxjs/toolkit` so the SDK shares the app's single
+React/Redux instance (otherwise hooks break). No sibling dir, no alias, no `pnpm build-all` — the
+build is fully self-contained (which is what makes it containerizable).
+
+To test against a **local SDK fork** instead, add a `resolve.alias` in `vite.config.ts` mapping
+`@agora-sdk/core` / `@agora-sdk/react-js` to the fork's built `dist/esm/index.js` (the file has a
+commented example), and rebuild the fork (`pnpm build-all`) after editing it.
 
 The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parsed from
 `VITE_API_BASE_URL` in `App.tsx`); the SDK no longer sniffs env directly.
