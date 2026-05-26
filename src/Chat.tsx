@@ -9,6 +9,7 @@ import {
   ConversationProvider,
   useConversationContext,
 } from "@agora-sdk/react-js";
+import { fileImageSrc } from "./EntityView";
 
 // Realtime chat. The list comes from useConversations; the open thread is wrapped in
 // ConversationProvider, which (a) joins the socket.io room so message:created events arrive live
@@ -116,6 +117,7 @@ function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
   // provider loads them), so we can title a DM with the other participant — no server change needed.
   const { messages, send, loadOlder, hasMore, mark, members } = useConversationContext() as any;
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
 
   // Title: explicit group name → the DM partner's handle (from members) → caller's fallback.
   const partner = convo?.type === "direct" ? (members ?? []).find((m: any) => m.userId !== user?.id) : null;
@@ -129,9 +131,11 @@ function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
   }, [messages?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
-    if (!text.trim()) return;
-    const t = text; setText("");
-    await send({ content: t });
+    if (!text.trim() && files.length === 0) return;
+    const t = text.trim(); const f = files;
+    setText(""); setFiles([]);
+    // useSendMessage switches to a multipart upload when `files` is present; file-only is allowed.
+    await send({ ...(t ? { content: t } : {}), ...(f.length ? { files: f } : {}) });
   };
 
   return (
@@ -142,15 +146,46 @@ function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
         {/* SDK returns messages newest-first; reverse for chronological top-to-bottom display. */}
         {[...(messages ?? [])].reverse().map((m: any) => (
           <div key={m.id} className={"msg" + (m.userId === user?.id ? " mine" : "")}>
-            <div>{m.content}</div>
+            {m.content && <div className="prewrap">{m.content}</div>}
+            <MessageFiles files={m.files} />
             <div className="muted">{m.userId === user?.id ? "you" : (m.userId?.slice(0, 8) || "system")} · {new Date(m.createdAt).toLocaleTimeString()}</div>
           </div>
         ))}
       </div>
-      <div className="row">
-        <input placeholder="message…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
-        <button className="primary" onClick={submit}>Send</button>
+      <div className="col">
+        <div className="row">
+          <input placeholder="message…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+          <label title="attach files" style={{ cursor: "pointer", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 8 }}>
+            📎
+            <input type="file" multiple style={{ display: "none" }} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          </label>
+          <button className="primary" onClick={submit}>Send</button>
+        </div>
+        {files.length > 0 && (
+          <div className="muted">📎 {files.map((f) => f.name).join(", ")} <button onClick={() => setFiles([])}>clear</button></div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// Render a chat message's attachments: images inline, other files as download links.
+function MessageFiles({ files }: { files?: any[] }) {
+  if (!files?.length) return null;
+  return (
+    <div className="col" style={{ gap: 4, marginTop: 4 }}>
+      {files.map((f: any) => {
+        const img = fileImageSrc(f);
+        return img ? (
+          <a key={f.id} href={f.originalPath} target="_blank" rel="noreferrer">
+            <img src={img} alt="" style={{ maxWidth: 240, maxHeight: 240, borderRadius: 8, border: "1px solid var(--border)" }} />
+          </a>
+        ) : (
+          <a key={f.id} href={f.originalPath} target="_blank" rel="noreferrer">
+            📄 {(f.originalMimeType || "file")} ({Math.round((f.originalSize || 0) / 1024)} KB)
+          </a>
+        );
+      })}
     </div>
   );
 }
