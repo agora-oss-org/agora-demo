@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import {
   useFetchConnections, useFetchReceivedPendingConnections,
   useAcceptConnection, useDeclineConnection, useRequestConnection,
+  useFetchUserByUsername,
 } from "@agora/react-js";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Bidirectional connections (friend requests) via the connection action hooks
 // (→ /v7/connections* + /v7/users/:id/connection, project derived from auth).
@@ -12,6 +15,7 @@ export default function Connections() {
   const accept = useAcceptConnection() as any;
   const decline = useDeclineConnection() as any;
   const request = useRequestConnection() as any;
+  const fetchUserByUsername = useFetchUserByUsername() as any;
 
   const [established, setEstablished] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
@@ -24,12 +28,30 @@ export default function Connections() {
       const p = await fetchPending({}); setPending(p?.data ?? []);
     } catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
   };
-  useEffect(() => { refresh(); /* eslint-disable-line */ }, []);
+  // Connections aren't realtime (Replyke's socket layer is chat-only), so the other party
+  // accepting won't push to us. Poll while this tab is mounted so accepted/incoming requests
+  // appear within a few seconds without a manual refresh.
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 6000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const doRequest = async () => {
-    if (!userId.trim()) return;
-    try { await request({ userId, message: "Hi from the Agora demo!" }); setUserId(""); setMsg("✓ request sent"); refresh(); }
-    catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
+    const input = userId.trim();
+    if (!input) return;
+    try {
+      // Accept a raw UUID or a @username — resolve the username to an id first (the server's
+      // connection request is keyed by user id, per the SDK/Replyke contract).
+      let targetId = input;
+      if (!UUID_RE.test(input)) {
+        const u = await fetchUserByUsername({ username: input.replace(/^@/, "") });
+        targetId = u.id;
+      }
+      await request({ userId: targetId, message: "Hi from the Agora demo!" });
+      setUserId(""); setMsg("✓ request sent"); refresh();
+    } catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
   };
 
   return (
@@ -37,7 +59,7 @@ export default function Connections() {
       <div className="panel col">
         <strong>Request a connection</strong>
         <div className="row">
-          <input placeholder="user id (uuid)" value={userId} onChange={(e) => setUserId(e.target.value)} />
+          <input placeholder="@username or user id" value={userId} onChange={(e) => setUserId(e.target.value)} />
           <button className="primary" onClick={doRequest}>Request</button>
         </div>
         {msg && <div className="muted">{msg}</div>}
