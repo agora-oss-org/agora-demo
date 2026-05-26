@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useEntityList } from "@agora/react-js";
-import EntityView from "./EntityView";
+import EntityView, { fileImageSrc } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). Creating a new entity is now its
@@ -18,7 +18,7 @@ export default function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (selected) return <EntityView entityId={selected} onBack={() => setSelected(null)} backLabel="← back to feed" />;
+  if (selected) return <EntityView entityId={selected} onBack={() => { setSelected(null); refresh(); }} backLabel="← back to feed" />;
   if (creating)
     return (
       <CreateEntity
@@ -39,7 +39,13 @@ export default function Feed() {
       {(entities ?? []).map((e: any) => (
         <div key={e.id} className="card" onClick={() => setSelected(e.id)} style={{ cursor: "pointer" }}>
           <h4>{e.title || "(untitled)"}</h4>
-          <div>{e.content}</div>
+          <div className="clamp3">{e.content}</div>
+          {(() => {
+            const src = (e.files ?? []).map(fileImageSrc).find(Boolean);
+            return src ? (
+              <img src={src} alt="" style={{ marginTop: 8, maxWidth: "100%", maxHeight: 220, borderRadius: 8, border: "1px solid var(--border)" }} />
+            ) : null;
+          })()}
           <div className="row" style={{ marginTop: 8 }}>
             <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
             <span className="pill">💬 {e.repliesCount ?? 0}</span>
