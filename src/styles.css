@@ -24,6 +24,8 @@ button {
   padding: 6px 12px;
 }
 button.primary { background: linear-gradient(90deg, var(--accent), var(--accent2)); border: 0; color: #fff; }
+button.linklike { background: transparent; border: 0; padding: 0 4px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+button.linklike:hover { color: var(--text); }
 button:disabled { opacity: 0.5; cursor: default; }
 input, textarea {
   font: inherit;

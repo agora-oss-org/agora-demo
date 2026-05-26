@@ -7,8 +7,9 @@ import Chat from "./Chat";
 import Spaces from "./Spaces";
 import Connections from "./Connections";
 import Notifications from "./Notifications";
+import Profile from "./Profile";
 
-type Tab = "feed" | "spaces" | "search" | "chat" | "connections" | "notifications";
+type Tab = "feed" | "spaces" | "search" | "chat" | "connections" | "notifications" | "profile";
 const TABS: { id: Tab; label: string }[] = [
   { id: "feed", label: "📰 Feed" },
   { id: "spaces", label: "🏘️ Spaces" },
@@ -16,6 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "chat", label: "💬 Chat" },
   { id: "connections", label: "🤝 Connections" },
   { id: "notifications", label: "🔔 Inbox" },
+  { id: "profile", label: "👤 Me" },
 ];
 
 export default function Shell() {
@@ -31,7 +33,9 @@ export default function Shell() {
       <div className="header">
         <div className="brand">🏛️ Agora <small>demo · @agora SDK → your Agora server</small></div>
         <div className="row">
-          <span className="muted">@{user?.username || user?.name || user?.id?.slice(0, 8)}</span>
+          <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
+            @{user?.username || user?.name || user?.id?.slice(0, 8)}
+          </button>
           <button onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
@@ -50,6 +54,7 @@ export default function Shell() {
       {tab === "chat" && <Chat />}
       {tab === "connections" && <Connections />}
       {tab === "notifications" && <Notifications />}
+      {tab === "profile" && <Profile />}
     </div>
   );
 }
