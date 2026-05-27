@@ -1,16 +1,30 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-// The SDK is consumed as the published npm packages @agora-sdk/core + @agora-sdk/react-js (real
-// dependencies in package.json), so the build is self-contained — no sibling dir needed, which is
-// what makes the app containerizable. React is deduped so the SDK shares the app's single React
-// instance.
+// SDK source resolution:
+// - By default the SDK is the published npm packages @agora-sdk/core + @agora-sdk/react-js (real
+//   dependencies), so the build is self-contained — which is what makes it containerizable.
+// - LOCAL FORK OVERRIDE: if the sibling agora-sdk repo is present *and built* (dist/esm exists), we
+//   alias the package names at its dist so local SDK edits take effect without republishing. This is
+//   guarded by an on-disk check, so it is automatically OFF in the Docker build context / CI (the
+//   build context is the demo dir only — no sibling dir — so the `npm ci`'d packages are used there).
+//   Rebuild the fork (`pnpm build-all` in ../agora-sdk) after editing it; restart this dev server to
+//   pick up a newly-present alias (Vite reads config at boot).
 //
-// To test against a LOCAL SDK fork instead, alias the package names at the fork's built dist, e.g.
-//   resolve: { alias: { "@agora-sdk/core": resolve(__dirname, "../agora-sdk/packages/core/dist/esm/index.js"), ... } }
-//
-// NB: the server base URL is passed to ReplykeProvider via the `baseUrl` prop (App.tsx parses
-// VITE_API_BASE_URL); the SDK no longer sniffs env directly.
+// React (+ Redux) is deduped so the SDK shares the app's single instance either way.
+const forkCore = fileURLToPath(new URL("../agora-sdk/packages/core/dist/esm/index.js", import.meta.url));
+const forkReactJs = fileURLToPath(new URL("../agora-sdk/packages/react-js/dist/esm/index.js", import.meta.url));
+const useLocalSdk = existsSync(forkCore) && existsSync(forkReactJs);
+if (useLocalSdk) {
+  // eslint-disable-next-line no-console
+  console.log("[vite] @agora-sdk → LOCAL fork (dist/esm). Rebuild the fork after edits.");
+}
+const sdkAlias: Record<string, string> = useLocalSdk
+  ? { "@agora-sdk/core": forkCore, "@agora-sdk/react-js": forkReactJs }
+  : {};
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -28,6 +42,7 @@ export default defineConfig({
     allowedHosts: [".intra.recoverysky.net"],
   },
   resolve: {
+    alias: sdkAlias,
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
   },
   optimizeDeps: {

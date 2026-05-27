@@ -52,14 +52,19 @@ self-contained because the SDK comes from npm (below) — no sibling dir in the 
 ## How the SDK is consumed (critical to understand)
 
 The SDK is the **published npm packages** `@agora-sdk/core` + `@agora-sdk/react-js` (normal
-`dependencies`). Source imports them by their real names. `vite.config.ts` only **dedupes**
-`react`, `react-dom`, `react-redux`, `@reduxjs/toolkit` so the SDK shares the app's single
-React/Redux instance (otherwise hooks break). No sibling dir, no alias, no `pnpm build-all` — the
-build is fully self-contained (which is what makes it containerizable).
+`dependencies`). Source imports them by their real names. `vite.config.ts` **dedupes** `react`,
+`react-dom`, `react-redux`, `@reduxjs/toolkit` so the SDK shares the app's single React/Redux
+instance (otherwise hooks break).
 
-To test against a **local SDK fork** instead, add a `resolve.alias` in `vite.config.ts` mapping
-`@agora-sdk/core` / `@agora-sdk/react-js` to the fork's built `dist/esm/index.js` (the file has a
-commented example), and rebuild the fork (`pnpm build-all`) after editing it.
+**Automatic local-fork override:** `vite.config.ts` checks whether the sibling
+`../agora-sdk/packages/{core,react-js}/dist/esm/index.js` exist on disk. If they do (you have the
+fork checked out next to the demo **and built**), it aliases the package names at that dist so local
+SDK edits take effect without republishing — it logs `[vite] @agora-sdk → LOCAL fork` at boot.
+**Rebuild the fork (`pnpm build-all` in `../agora-sdk`) after editing it, and restart this dev server
+to pick up a newly-present alias** (Vite reads config only at boot). The check is on-disk, so the
+alias is automatically **off in the Docker build context / CI** (build context is the demo dir only —
+no sibling — so the `npm ci`'d packages are used), keeping the image self-contained. To force npm
+even locally, remove/rename the fork's `dist`, or temporarily blank the alias.
 
 The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parsed from
 `VITE_API_BASE_URL` in `App.tsx`); the SDK no longer sniffs env directly.
