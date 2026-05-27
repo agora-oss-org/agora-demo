@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "description": "Demo/test app driving the @agora SDK hooks against a running Agora server",
+  "author": "Jenova Marie <jenova-marie@proton.me>",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

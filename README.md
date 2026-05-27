@@ -1,5 +1,7 @@
 # Agora demo
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 A standalone **Vite + React (TypeScript)** app that drives the real Agora SDK hooks
 (`@agora-sdk/react-js` + `@agora-sdk/core`) against a running Agora server. It's a 1:1
 compatibility harness — every tab exercises one SDK surface end-to-end, so if something breaks here
@@ -112,3 +114,7 @@ library — tabs and in-tab drill-downs are conditional renders driven by local 
 hand-written `styles.css` (utility-ish classes, no framework).
 
 See [CLAUDE.md](./CLAUDE.md) for the per-file SDK-surface map and editing conventions.
+
+## License
+
+[MIT](./LICENSE) © Jenova Marie
