@@ -8,6 +8,7 @@ export default function Spaces() {
   const list = useSpaceList({ listId: "demo-spaces-root" }) as any;
   const { spaces, loading, hasMore, fetchSpaces, loadMore, createSpace } = list;
   const [name, setName] = useState("");
+  const [priv, setPriv] = useState(false);
   const [busy, setBusy] = useState(false);
   const [entered, setEntered] = useState<any | null>(null);
 
@@ -22,8 +23,10 @@ export default function Spaces() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      await createSpace({ name });
+      // Private = members-only reading + join requires admin approval. Public = anyone reads/joins.
+      await createSpace({ name, ...(priv ? { readingPermission: "members", requireJoinApproval: true } : {}) });
       setName("");
+      setPriv(false);
       refresh();
     } finally {
       setBusy(false);
@@ -40,6 +43,10 @@ export default function Spaces() {
           <input placeholder="space name" value={name} onChange={(e) => setName(e.target.value)} />
           <button className="primary" disabled={busy} onClick={create}>Create</button>
         </div>
+        <label className="row" style={{ gap: 6 }}>
+          <input type="checkbox" style={{ width: "auto" }} checked={priv} onChange={(e) => setPriv(e.target.checked)} />
+          <span className="muted">🔒 Private (members-only; joining requires approval)</span>
+        </label>
       </div>
       <div className="muted">{loading ? "Loading…" : `${spaces?.length ?? 0} top-level spaces`}</div>
       {(spaces ?? []).map((s: any) => (
