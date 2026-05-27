@@ -133,6 +133,13 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
       >
         ⬆ Upvote ({reactionCounts?.upvote ?? 0})
       </button>
+      <button
+        className={currentReaction === "downvote" ? "primary" : ""}
+        disabled={loading}
+        onClick={() => toggleReaction({ reactionType: "downvote" })}
+      >
+        ⬇ Downvote ({reactionCounts?.downvote ?? 0})
+      </button>
       <span className="muted">your reaction: {currentReaction ?? "none"}</span>
     </div>
   );
@@ -158,6 +165,14 @@ function CommentRow({ comment }: { comment: any }) {
           style={{ padding: "2px 8px", fontSize: 12 }}
         >
           ⬆ {reactionCounts?.upvote ?? 0}
+        </button>
+        <button
+          className={currentReaction === "downvote" ? "primary" : ""}
+          disabled={loading || !isReal}
+          onClick={() => toggleReaction({ reactionType: "downvote" })}
+          style={{ padding: "2px 8px", fontSize: 12 }}
+        >
+          ⬇ {reactionCounts?.downvote ?? 0}
         </button>
         <span className="muted">{new Date(comment.createdAt).toLocaleString()}</span>
       </div>

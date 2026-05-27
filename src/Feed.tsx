@@ -48,6 +48,7 @@ export default function Feed() {
           })()}
           <div className="row" style={{ marginTop: 8 }}>
             <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
+            <span className="pill">⬇ {e.reactionCounts?.downvote ?? 0}</span>
             <span className="pill">💬 {e.repliesCount ?? 0}</span>
             <span className="spacer" />
             <span className="muted">open →</span>
