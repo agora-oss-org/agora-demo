@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { useAuth } from "@agora-sdk/react-js";
+import { useAuth, useOAuthSignIn } from "@agora-sdk/react-js";
 
-// Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens).
+// Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens),
+// plus GitHub OAuth via useOAuthSignIn (→ /oauth/authorize → Supabase-brokered → /oauth/callback,
+// which redirects back here with the minted tokens in the URL fragment; Shell picks them up).
 export default function Login() {
   const { signInWithEmailAndPassword, signUpWithEmailAndPassword } = useAuth();
+  const { initiateOAuth, isLoading: oauthBusy, error: oauthErr } = useOAuthSignIn() as any;
   const [email, setEmail] = useState(import.meta.env.VITE_DEMO_EMAIL || "");
   const [password, setPassword] = useState(import.meta.env.VITE_DEMO_PASSWORD || "");
   const [mode, setMode] = useState<"in" | "up">("in");
@@ -67,6 +70,20 @@ export default function Login() {
       </button>
       <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setErr(null); }}>
         {mode === "in" ? "Need an account? Sign up" : "Have an account? Sign in"}
+      </button>
+
+      <div className="row" style={{ margin: "4px 0" }}>
+        <span className="spacer" style={{ borderTop: "1px solid var(--border)" }} />
+        <span className="muted">or</span>
+        <span className="spacer" style={{ borderTop: "1px solid var(--border)" }} />
+      </div>
+      {oauthErr && <div className="error">{oauthErr}</div>}
+      {/* Redirect back to the demo's own origin; the Agora callback appends tokens to the fragment. */}
+      <button
+        disabled={oauthBusy}
+        onClick={() => initiateOAuth({ provider: "github", redirectAfterAuth: window.location.origin })}
+      >
+        {oauthBusy ? "Redirecting…" : "🐙 Continue with GitHub"}
       </button>
     </div>
   );

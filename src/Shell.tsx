@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useAuth, useUser } from "@agora-sdk/react-js";
+import { useEffect, useState } from "react";
+import { useAuth, useUser, useOAuthSignIn } from "@agora-sdk/react-js";
 import Login from "./Login";
 import Feed from "./Feed";
 import Search from "./Search";
@@ -23,7 +23,15 @@ const TABS: { id: Tab; label: string }[] = [
 export default function Shell() {
   const { initialized, accessToken, signOut } = useAuth();
   const { user } = useUser();
+  const { handleOAuthCallback } = useOAuthSignIn();
   const [tab, setTab] = useState<Tab>("feed");
+
+  // On load, if we came back from an OAuth round-trip the Agora server appended the minted tokens to
+  // the URL fragment (#accessToken=…&refreshToken=…); pull them into the store + clean the URL.
+  useEffect(() => {
+    handleOAuthCallback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!initialized) return <div className="center muted">Loading session…</div>;
   if (!accessToken) return <div className="center"><Login /></div>;
