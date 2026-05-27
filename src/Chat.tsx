@@ -101,7 +101,13 @@ export default function Chat() {
         {active ? (
           // key=active remounts the provider (re-joins the room) when switching conversations.
           <ConversationProvider key={active} conversationId={active}>
-            <Conversation convo={activeConvo} fallback={labelFor(activeConvo)} />
+            <Conversation
+              convo={activeConvo}
+              fallback={labelFor(activeConvo)}
+              myId={user?.id}
+              contacts={contacts}
+              onLeave={async () => { await refresh?.(); setActive(null); }}
+            />
           </ConversationProvider>
         ) : (
           <div className="panel muted">Select or create a conversation →</div>
@@ -111,13 +117,19 @@ export default function Chat() {
   );
 }
 
-function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
+function Conversation({
+  convo, fallback, myId, contacts, onLeave,
+}: {
+  convo: any; fallback: string; myId?: string; contacts?: any[]; onLeave?: () => void;
+}) {
   const { user } = useUser() as any;
   // useConversationContext (from ConversationProvider) exposes messages/send/… AND members (the
   // provider loads them), so we can title a DM with the other participant — no server change needed.
   const { messages, send, loadOlder, hasMore, mark, members } = useConversationContext() as any;
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [showMembers, setShowMembers] = useState(false);
+  const isGroup = convo?.type === "group";
 
   // Title: explicit group name → the DM partner's handle (from members) → caller's fallback.
   const partner = convo?.type === "direct" ? (members ?? []).find((m: any) => m.userId !== user?.id) : null;
@@ -140,7 +152,20 @@ function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
 
   return (
     <div className="panel col" style={{ height: 460 }}>
-      <strong>{title}</strong>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <strong>{title}</strong>
+        {isGroup && (
+          <button className="linklike" onClick={() => setShowMembers((s) => !s)} title="manage members">
+            👥 {members?.length ?? 0}
+          </button>
+        )}
+      </div>
+      {/* Groups are private/member-scoped: people see the group only once an admin adds them.
+          This panel (useConversationMembers.addMember/removeMember/leave) is what makes a group
+          more than a solo room. */}
+      {isGroup && showMembers && (
+        <GroupMembers conversationId={convo.id} myId={myId} contacts={contacts} onLeave={onLeave} />
+      )}
       {hasMore && <button onClick={() => loadOlder()}>Load older</button>}
       <div className="scroll col" style={{ flex: 1 }}>
         {/* SDK returns messages newest-first; reverse for chronological top-to-bottom display. */}
@@ -165,6 +190,80 @@ function Conversation({ convo, fallback }: { convo: any; fallback: string }) {
           <div className="muted">📎 {files.map((f) => f.name).join(", ")} <button onClick={() => setFiles([])}>clear</button></div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Group member management. Admins (the creator, and anyone they promote) add connections, remove
+// members, or leave. Added members immediately see the group in their own conversation list (the
+// server lists conversations you're a member of), which is the whole point — a group is only useful
+// once you invite people. Uses useConversationMembers (addMember/removeMember/leave) — no SDK change.
+function GroupMembers({
+  conversationId, myId, contacts, onLeave,
+}: {
+  conversationId: string; myId?: string; contacts?: any[]; onLeave?: () => void;
+}) {
+  const { members, addMember, removeMember, leave } = useConversationMembers({ conversationId }) as any;
+  // Read the current user here too (not just the passed prop) so we're resilient to a stale/late
+  // prop (e.g. right after an OAuth round-trip the prop can lag the store).
+  const { user } = useUser() as any;
+  const me = user?.id ?? myId;
+  const [pick, setPick] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const memberIds = new Set((members ?? []).map((m: any) => m.userId));
+  const myMember = (members ?? []).find((m: any) => m.userId === me);
+  const iAmAdmin = myMember?.role === "admin";
+  // Show member-management unless we POSITIVELY know we're a non-admin member. If we can't identify
+  // our own membership (id mismatch / user not loaded yet), still show it — the server enforces
+  // admin-only and surfaces a clear error, so the creator is never locked out by a client glitch.
+  const canManage = iAmAdmin || !myMember;
+  // Connections not already in the group → candidates to add.
+  const addable = (contacts ?? []).filter((c: any) => c.connectedUser?.id && !memberIds.has(c.connectedUser.id));
+
+  const add = async () => {
+    if (!pick) return;
+    setBusy(true); setErr(null);
+    try { await addMember({ userId: pick }); setPick(""); }
+    catch (e: any) { setErr(e?.response?.data?.error || "Could not add member (admins only)"); }
+    finally { setBusy(false); }
+  };
+  const doLeave = async () => { try { await leave(); onLeave?.(); } catch (e: any) { setErr(e?.message || "Could not leave"); } };
+
+  return (
+    <div className="col" style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "8px 0", gap: 6 }}>
+      <div className="muted">👥 {members?.length ?? 0} member{(members?.length ?? 0) === 1 ? "" : "s"}{iAmAdmin ? " · you're admin" : ""}</div>
+      <div className="col" style={{ gap: 2 }}>
+        {(members ?? []).map((m: any) => (
+          <div key={m.userId} className="row" style={{ justifyContent: "space-between" }}>
+            <span>@{m.user?.username || m.userId?.slice(0, 8)}{m.userId === me ? " (you)" : ""}{m.role === "admin" ? " · admin" : ""}</span>
+            {canManage && m.userId !== me && (
+              <button className="linklike" title="remove" onClick={() => removeMember({ userId: m.userId }).catch(() => {})}>✕</button>
+            )}
+          </div>
+        ))}
+      </div>
+      {canManage && (
+        <div className="col" style={{ gap: 4 }}>
+          <div className="row">
+            <select value={pick} onChange={(e) => setPick(e.target.value)} style={{ flex: 1 }}>
+              <option value="">{addable.length ? "add a connection…" : "no connections to add"}</option>
+              {addable.map((c: any) => (
+                <option key={c.id} value={c.connectedUser.id}>
+                  @{c.connectedUser?.username || c.connectedUser?.id?.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+            <button className="primary" onClick={add} disabled={!pick || busy}>➕ add</button>
+          </div>
+          {!addable.length && (
+            <div className="muted">Add connections in the 🤝 Connections tab first — group members are picked from your connections.</div>
+          )}
+        </div>
+      )}
+      {err && <div className="error">{err}</div>}
+      <button onClick={doLeave}>Leave group</button>
     </div>
   );
 }
