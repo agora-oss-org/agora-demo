@@ -2,21 +2,27 @@ import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc } from "./EntityView";
 import CreateEntity from "./CreateEntity";
+import FeedSettings from "./FeedSettings";
 
-// Lists entities via useEntityList (→ GET /v7/:project/entities). Creating a new entity is now its
-// own routed form (CreateEntity), reached via the "New post" button.
+// Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
+// ranking algorithm per request (hot/decay/gravity/…); the ⚙️ panel edits the project-wide default.
+const SORTS = ["hot", "top", "new", "controversial", "decay", "gravity", "wilson", "bayesian"];
+
 export default function Feed() {
   const list = useEntityList({ listId: "demo-feed" }) as any;
   const { entities, loading, hasMore, fetchEntities, loadMore } = list;
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [sortBy, setSortBy] = useState("hot");
+  const [showSettings, setShowSettings] = useState(false);
 
-  const refresh = () => fetchEntities({}, undefined, { limit: 20 });
+  const refresh = (sort = sortBy) => fetchEntities({}, { sortBy: sort }, { limit: 20 });
 
+  // Refetch whenever the chosen algorithm changes (also covers the initial load).
   useEffect(() => {
-    refresh();
+    refresh(sortBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sortBy]);
 
   if (selected) return <EntityView entityId={selected} onBack={() => { setSelected(null); refresh(); }} backLabel="← back to feed" />;
   if (creating)
@@ -31,11 +37,18 @@ export default function Feed() {
     <div className="col">
       <div className="row">
         <strong>Feed</strong>
+        <label className="muted">sort</label>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ width: "auto" }}>
+          {SORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={() => setShowSettings((v) => !v)} title="feed ranking settings">⚙️</button>
         <span className="spacer" />
         <button className="primary" onClick={() => setCreating(true)}>➕ New post</button>
       </div>
 
-      <div className="muted">{loading ? "Loading…" : `${entities?.length ?? 0} entities`}</div>
+      {showSettings && <FeedSettings />}
+
+      <div className="muted">{loading ? "Loading…" : `${entities?.length ?? 0} entities · sorted by ${sortBy}`}</div>
       {(entities ?? []).map((e: any) => (
         <div key={e.id} className="card" onClick={() => setSelected(e.id)} style={{ cursor: "pointer" }}>
           <h4>{e.title || "(untitled)"}</h4>
