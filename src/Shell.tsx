@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth, useUser, useOAuthSignIn } from "@agora-sdk/react-js";
+import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
 import Login from "./Login";
 import Feed from "./Feed";
 import Search from "./Search";
@@ -21,9 +21,14 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Shell() {
-  const { initialized, accessToken, signOut } = useAuth();
+  const { initialized, accessToken } = useAuth();
   const { user } = useUser();
   const { handleOAuthCallback } = useOAuthSignIn();
+  // Full logout: clears ALL persisted accounts (clearAllAccounts), not just the active one. The
+  // active-account-only useAuth().signOut() takes the SDK's "switch to a remaining account" path
+  // when more than one account is stored, so it can't reliably end the session (and won't clear a
+  // corrupted/duplicate accounts map). signOutAll wipes the whole map and returns us to Login.
+  const { signOutAll } = useSignOutAll() as any;
   const [tab, setTab] = useState<Tab>("feed");
 
   // On load, if we came back from an OAuth round-trip the Agora server appended the minted tokens to
@@ -44,7 +49,7 @@ export default function Shell() {
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
           </button>
-          <button onClick={() => signOut()}>Sign out</button>
+          <button onClick={() => signOutAll()}>Sign out</button>
         </div>
       </div>
 
