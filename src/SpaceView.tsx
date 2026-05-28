@@ -3,6 +3,7 @@ import {
   useSpaceList, useEntityList, useUser,
   useCheckMyMembership, useJoinSpace, useLeaveSpace,
   useFetchSpaceMembers, useApproveMember, useDeclineMember,
+  useFetchSpaceConversation, ConversationProvider, useConversationContext,
 } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc } from "./EntityView";
 import CreateEntity from "./CreateEntity";
@@ -29,6 +30,7 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
   const [creating, setCreating] = useState(false);
   const [membership, setMembership] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
+  const [showChat, setShowChat] = useState(false);
 
   // Visibility/membership derivation. The space owner is always treated as admin (no membership row
   // needed), so OR isOwner into the member/admin/read flags.
@@ -125,6 +127,15 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
         </div>
       </div>
 
+      {/* Space chat — a community channel bound to this space. Members only (the server gates +
+          auto-joins active space members); mounting the fetch for a non-member would 403. */}
+      {isActiveMember && (
+        <div className="col">
+          <button onClick={() => setShowChat((s) => !s)}>💬 {showChat ? "Hide space chat" : "Space chat"}</button>
+          {showChat && <SpaceChat spaceId={space.id} meId={me?.id} />}
+        </div>
+      )}
+
       {/* Join requests — admins/owner of a space that gates joining */}
       {isAdmin && (
         <div className="panel col">
@@ -203,6 +214,70 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
       ))}
       {ents.hasMore && <button onClick={() => ents.loadMore()}>Load more entries</button>}
       </>
+      )}
+    </div>
+  );
+}
+
+// Space chat: get-or-create the space's conversation (useFetchSpaceConversation → the server
+// auto-joins the caller as a member), then drive it with the standard ConversationProvider +
+// useConversationContext — the same realtime chat surface used for DMs and groups.
+function SpaceChat({ spaceId, meId }: { spaceId: string; meId?: string }) {
+  const { conversation, loading } = useFetchSpaceConversation({ spaceId }) as any;
+  if (!conversation) return <div className="panel muted">{loading ? "Loading space chat…" : "Space chat unavailable."}</div>;
+  return (
+    <ConversationProvider key={conversation.id} conversationId={conversation.id}>
+      <SpaceThread
+        meId={meId}
+        postingPermission={conversation.postingPermission}
+        myRole={conversation.currentMember?.role}
+      />
+    </ConversationProvider>
+  );
+}
+
+function SpaceThread({
+  meId, postingPermission, myRole,
+}: {
+  meId?: string; postingPermission?: string | null; myRole?: string;
+}) {
+  const { messages, send, loadOlder, hasMore, mark } = useConversationContext() as any;
+  const [text, setText] = useState("");
+  // postingPermission "admins" → only conversation admins may post (server enforces this too).
+  const canPost = postingPermission !== "admins" || myRole === "admin";
+
+  useEffect(() => {
+    const newest = messages?.[messages.length - 1];
+    if (newest?.id) mark?.({ messageId: newest.id });
+  }, [messages?.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = async () => {
+    const t = text.trim();
+    if (!t) return;
+    setText("");
+    await send({ content: t });
+  };
+
+  return (
+    <div className="panel col" style={{ height: 360 }}>
+      <strong>💬 Space chat</strong>
+      {hasMore && <button onClick={() => loadOlder()}>Load older</button>}
+      <div className="scroll col" style={{ flex: 1 }}>
+        {[...(messages ?? [])].reverse().map((m: any) => (
+          <div key={m.id} className={"msg" + (m.userId === meId ? " mine" : "")}>
+            {m.content && <div className="prewrap">{m.content}</div>}
+            <div className="muted">{m.userId === meId ? "you" : (m.userId?.slice(0, 8) || "system")} · {new Date(m.createdAt).toLocaleTimeString()}</div>
+          </div>
+        ))}
+        {(messages?.length ?? 0) === 0 && <div className="muted">No messages yet — say hi to the space 👋</div>}
+      </div>
+      {canPost ? (
+        <div className="row">
+          <input placeholder="message the space…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+          <button className="primary" onClick={submit}>Send</button>
+        </div>
+      ) : (
+        <div className="muted">Only space admins can post in this channel.</div>
       )}
     </div>
   );
