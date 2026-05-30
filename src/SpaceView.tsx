@@ -4,6 +4,7 @@ import {
   useCheckMyMembership, useJoinSpace, useLeaveSpace,
   useFetchSpaceMembers, useApproveMember, useDeclineMember,
   useFetchSpaceConversation, ConversationProvider, useConversationContext,
+  useFetchDigestConfig, useUpdateDigestConfig,
 } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc } from "./EntityView";
 import CreateEntity from "./CreateEntity";
@@ -31,6 +32,7 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
   const [membership, setMembership] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [showChat, setShowChat] = useState(false);
+  const [showDigest, setShowDigest] = useState(false);
 
   // Visibility/membership derivation. The space owner is always treated as admin (no membership row
   // needed), so OR isOwner into the member/admin/read flags.
@@ -149,6 +151,15 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
             </div>
           ))}
           {requests.length === 0 && <div className="muted">none</div>}
+        </div>
+      )}
+
+      {/* Digest settings — admin/owner only. Per-space daily roundup: the server POSTs a signed
+          space.digest of recent entries to digestWebhookUrl at digestScheduleHour (in digestTimezone). */}
+      {isAdmin && (
+        <div className="col">
+          <button onClick={() => setShowDigest((s) => !s)}>📨 {showDigest ? "Hide digest settings" : "Digest settings"}</button>
+          {showDigest && <DigestSettings spaceId={space.id} />}
         </div>
       )}
 
@@ -279,6 +290,139 @@ function SpaceThread({
       ) : (
         <div className="muted">Only space admins can post in this channel.</div>
       )}
+    </div>
+  );
+}
+
+// Admin-only digest config editor (GET/PATCH /spaces/:id/digest-config — both admin-gated server-side).
+// The server masks the secret on read ("••••••••"), so we never receive it back in cleartext: we only
+// track whether one is SET and only send digestWebhookSecret on save when the admin types a new value
+// (a blank field leaves the stored secret untouched — sending the mask would corrupt it).
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+// Intl.supportedValuesOf is widely available; fall back to a tiny common set if not.
+const TIMEZONES: string[] = (() => {
+  const sov = (Intl as any).supportedValuesOf;
+  const list: string[] = typeof sov === "function" ? sov("timeZone") : ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Tokyo"];
+  return list.includes("UTC") ? list : ["UTC", ...list];
+})();
+
+function DigestSettings({ spaceId }: { spaceId: string }) {
+  const fetchDigestConfig = useFetchDigestConfig() as any;
+  const updateDigestConfig = useUpdateDigestConfig() as any;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ kind: "ok" | "err" | "info"; msg: string } | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [url, setUrl] = useState("");
+  const [hour, setHour] = useState(9);
+  const [tz, setTz] = useState("UTC");
+  const [secret, setSecret] = useState("");      // new secret only; blank = keep the stored one
+  const [secretSet, setSecretSet] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setStatus(null);
+    fetchDigestConfig({ spaceId })
+      .then((cfg: any) => {
+        if (!alive) return;
+        setEnabled(!!cfg.digestEnabled);
+        setUrl(cfg.digestWebhookUrl ?? "");
+        setHour(cfg.digestScheduleHour ?? 9);
+        setTz(cfg.digestTimezone ?? "UTC");
+        setSecretSet(!!cfg.digestWebhookSecret);
+      })
+      .catch((e: any) => { if (alive) setStatus({ kind: "err", msg: `Couldn't load config: ${e?.message ?? "error"}` }); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId]);
+
+  // Client-side only, user-triggered: fill the field with a fresh random secret to copy + save.
+  const generate = () => {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    setSecret(Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join(""));
+    setStatus({ kind: "info", msg: "Generated a secret — copy it somewhere safe, then Save. It won't be shown again." });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const update: any = {
+        digestEnabled: enabled,
+        digestWebhookUrl: url.trim() || null,
+        digestScheduleHour: hour,
+        digestTimezone: tz || "UTC",
+      };
+      if (secret.trim()) update.digestWebhookSecret = secret.trim();
+      const res = await updateDigestConfig({ spaceId, update });
+      setSecretSet(!!res?.digestWebhookSecret);
+      setSecret(""); // clear the input; the stored value is masked on read
+      setStatus({ kind: "ok", msg: "Saved ✓" });
+    } catch (e: any) {
+      setStatus({ kind: "err", msg: `Save failed: ${e?.message ?? "error"}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="panel muted">Loading digest config…</div>;
+
+  // Gentle nudge: digests only fire when enabled AND fully configured (server's isDue() check).
+  const missing = enabled && (!url.trim() || (!secretSet && !secret.trim()));
+
+  return (
+    <div className="panel col">
+      <strong>📨 Digest settings</strong>
+      <div className="muted">A signed daily roundup of this space's recent entries, POSTed to your webhook at the scheduled hour.</div>
+
+      <label className="row" style={{ gap: 6 }}>
+        <input type="checkbox" style={{ width: "auto" }} checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <span>Enabled</span>
+      </label>
+
+      <label className="col" style={{ gap: 4 }}>
+        <span className="muted">Webhook URL</span>
+        <input placeholder="https://your-receiver.example.com/agora-digest" value={url} onChange={(e) => setUrl(e.target.value)} />
+      </label>
+
+      <div className="row">
+        <label className="col" style={{ gap: 4, flex: 1 }}>
+          <span className="muted">Schedule hour</span>
+          <select value={hour} onChange={(e) => setHour(Number(e.target.value))}>
+            {HOURS.map((h) => (
+              <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+            ))}
+          </select>
+        </label>
+        <label className="col" style={{ gap: 4, flex: 2 }}>
+          <span className="muted">Timezone</span>
+          <select value={tz} onChange={(e) => setTz(e.target.value)}>
+            {TIMEZONES.map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="col" style={{ gap: 4 }}>
+        <span className="muted">Webhook secret {secretSet ? "(set — leave blank to keep)" : "(none set)"}</span>
+        <div className="row">
+          <input type="password" autoComplete="new-password" placeholder={secretSet ? "•••••••• keep existing" : "paste or generate a secret"} value={secret} onChange={(e) => setSecret(e.target.value)} />
+          <button type="button" onClick={generate} title="Generate a random secret (client-side)">🎲 Generate</button>
+        </div>
+        <span className="muted">Used to HMAC-sign the digest (X-Signature). Your receiver verifies with the same value.</span>
+      </label>
+
+      {missing && <div className="muted">⚠️ Won't fire until a webhook URL and secret are both set.</div>}
+      {status && <div className={status.kind === "err" ? "" : "muted"} style={status.kind === "err" ? { color: "#ff6b6b" } : undefined}>{status.msg}</div>}
+
+      <div className="row">
+        <button className="primary" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save digest settings"}</button>
+      </div>
     </div>
   );
 }
