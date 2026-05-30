@@ -1,5 +1,88 @@
 import { useState } from "react";
-import { EntityProvider, useEntity, useUser, useReactionToggle, useCommentSectionData } from "@agora-sdk/react-js";
+import {
+  EntityProvider, useEntity, useUser,
+  useReactionToggle, useCommentSectionData, useCreateReport,
+} from "@agora-sdk/react-js";
+
+// Report reasons. The SDK exposes only the ReportReasonKey *type* from its index, not the
+// runtime label map, so we mirror the labels here (kept in sync with @agora-sdk/core's
+// constants/reportReasons). Used by ReportButton below.
+const REPORT_REASONS: ReadonlyArray<[string, string]> = [
+  ["spam", "It's spam"],
+  ["inappropriateContent", "Contains inappropriate content"],
+  ["harassment", "It's harassment or bullying"],
+  ["misinformation", "Spreads false information"],
+  ["hateSpeech", "Contains hate speech or symbols"],
+  ["violence", "Promotes violence or dangerous behavior"],
+  ["illegalActivity", "Promotes illegal activity"],
+  ["selfHarm", "Promotes self-harm or suicide"],
+  ["other", "Other"],
+];
+
+// 🚩 Report this entity/comment to moderators via useCreateReport (→ POST /reports). Hidden for
+// content you authored, and for optimistic-only comments that don't have a server id yet.
+// Inline disclosure via <details>: closed = just the 🚩 chip; open = a reason picker + optional
+// details + Submit. After a successful report we replace the control with a "✓ Reported" pill.
+function ReportButton({
+  targetType, targetId, ownerId, disabled,
+}: {
+  targetType: "entity" | "comment";
+  targetId: string;
+  ownerId?: string;
+  disabled?: boolean;
+}) {
+  const { user } = useUser() as any;
+  const createReport = useCreateReport({ type: targetType }) as any;
+  const [reason, setReason] = useState<string>("spam");
+  const [details, setDetails] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (disabled) return null;
+  if (user && ownerId && user.id === ownerId) return null;
+  if (done) return <span className="muted" style={{ fontSize: 12 }}>✓ Reported</span>;
+
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      await createReport({ targetId, reason, details: details.trim() || undefined });
+      setDone(true);
+      setReason("spam"); setDetails("");
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || "Couldn't submit report");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <details>
+      <summary
+        title={`Report this ${targetType}`}
+        style={{ cursor: "pointer", listStyle: "none", fontSize: 12, color: "var(--muted)", padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 6 }}
+      >🚩</summary>
+      <div className="col" style={{ gap: 4, padding: 8, marginTop: 4, border: "1px solid var(--border)", borderRadius: 8, minWidth: 240 }}>
+        <strong style={{ fontSize: 13 }}>Report this {targetType}</strong>
+        <label className="muted">Reason</label>
+        <select value={reason} disabled={busy} onChange={(e) => setReason(e.target.value)}>
+          {REPORT_REASONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        </select>
+        <label className="muted">Details (optional)</label>
+        <textarea
+          placeholder="anything that would help a moderator…"
+          rows={2}
+          disabled={busy}
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+        />
+        {err && <div className="error">{err}</div>}
+        <div className="row">
+          <span className="spacer" />
+          <button className="primary" disabled={busy} onClick={submit}>{busy ? "Submitting…" : "Submit report"}</button>
+        </div>
+      </div>
+    </details>
+  );
+}
 
 export default function EntityView({
   entityId,
@@ -141,6 +224,8 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
         ⬇ Downvote ({reactionCounts?.downvote ?? 0})
       </button>
       <span className="muted">your reaction: {currentReaction ?? "none"}</span>
+      <span className="spacer" />
+      <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} />
     </div>
   );
 }
@@ -175,6 +260,8 @@ function CommentRow({ comment }: { comment: any }) {
           ⬇ {reactionCounts?.downvote ?? 0}
         </button>
         <span className="muted">{new Date(comment.createdAt).toLocaleString()}</span>
+        <span className="spacer" />
+        <ReportButton targetType="comment" targetId={comment.id} ownerId={comment.userId} disabled={!isReal} />
       </div>
     </div>
   );
