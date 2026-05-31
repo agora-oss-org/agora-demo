@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
 import Login from "./Login";
-import EntityView from "./EntityView";
+import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
 import Chat from "./Chat";
@@ -93,7 +93,7 @@ export default function Shell() {
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
           </button>
           <button onClick={() => signOutAll()}>Sign out</button>
-          {ADMIN_URL && (
+          {ADMIN_URL && isOperatorToken(accessToken) && (
             <button onClick={() => window.open(ADMIN_URL, "_blank", "noopener,noreferrer")} title="Open the admin app in a new tab">
               🛠️ Admin
             </button>

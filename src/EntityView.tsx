@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  EntityProvider, useEntity, useUser,
+  EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
 } from "@agora-sdk/react-js";
 
@@ -246,13 +246,36 @@ export function isModeratedKept(entity: any): boolean {
   return entity?.moderationStatus === "approved";
 }
 
+// "Operator" here is the *deployment-operator* god-view, NOT the user's profile role. The server
+// stamps a boolean `operator` claim into the access JWT (from the OPERATOR_USER_IDS/OPERATOR_EMAILS
+// allowlist) — independent of the "admin"/"moderator"/"visitor" UserRole. We read it back by
+// decoding the token client-side. Display-only gate; the server is the real enforcement (it already
+// hides removed content from non-operators), so an unverified decode is fine here.
+export function isOperatorToken(accessToken: string | null | undefined): boolean {
+  if (!accessToken) return false;
+  try {
+    let b64 = accessToken.split(".")[1];
+    if (!b64) return false;
+    b64 = b64.replace(/-/g, "+").replace(/_/g, "/");
+    b64 += "=".repeat((4 - (b64.length % 4)) % 4); // restore base64url padding
+    return JSON.parse(atob(b64)).operator === true;
+  } catch {
+    return false;
+  }
+}
+
 // A moderation-status pill for an entity or comment, with the moderator timestamp/reason in its
-// tooltip: 🚫 red for removed (redacted, operator-only), ✅ green for reviewed-and-kept. Renders
-// nothing for un-moderated content, so it's safe to drop into any card/comment pill row.
+// tooltip: 🚫 red for removed (redacted), ✅ green for reviewed-and-kept. Renders nothing for
+// un-moderated content — AND nothing for non-operators. "removed" content already only reaches
+// operators (the server hides it from everyone else), but "kept"/"approved" stays live for all
+// viewers with the field attached (shape.ts sends moderationStatus to every reader), so without
+// this gate a plain visitor would see "✅ kept". Gate on the JWT operator claim, not user.role.
 export function ModerationPill({ entity }: { entity: any }) {
+  const { accessToken } = useAuth() as any;
   const removed = isModeratedOut(entity);
   const kept = isModeratedKept(entity);
   if (!removed && !kept) return null;
+  if (!isOperatorToken(accessToken)) return null;
   const when = entity.moderatedAt ? new Date(entity.moderatedAt).toLocaleString() : null;
   const verb = removed ? "Removed by moderation" : "Reviewed and kept";
   const title = [verb, when && `· ${when}`, entity.moderationReason && `— ${entity.moderationReason}`]
