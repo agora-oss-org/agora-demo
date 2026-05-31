@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
 import Login from "./Login";
+import useTokenRefresh from "./useTokenRefresh";
 import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
@@ -45,6 +46,8 @@ function clearDeepLinkFromUrl() {
 
 export default function Shell() {
   const { initialized, accessToken } = useAuth();
+  // Proactively rotate the access token before its 30-min TTL lapses (no-op until signed in).
+  useTokenRefresh();
   const { user } = useUser();
   const { handleOAuthCallback } = useOAuthSignIn();
   // Full logout: clears ALL persisted accounts (clearAllAccounts), not just the active one. The
