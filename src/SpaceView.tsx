@@ -41,9 +41,13 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
   const isAdmin = isOwner || !!membership?.permissions?.isAdmin || !!membership?.permissions?.isModerator;
   const isActiveMember = isOwner || membership?.status === "active";
   const isPending = membership?.status === "pending";
-  // Reading a members-only space requires active membership (pending/declined don't count); posting
-  // requires active membership too (and admin role when postingPermission is "admins").
-  const canRead = space.readingPermission !== "members" || isActiveMember;
+  // A space is private if EITHER reading is members-only OR joining is gated by approval — match
+  // the lock badge above. Reading a private space requires active membership (pending/declined
+  // don't count); posting requires active membership too (and admin role when postingPermission
+  // is "admins"). Previously we only gated on readingPermission==="members", which meant a space
+  // with requireJoinApproval but readingPermission left at the default still showed its full entry
+  // list (and click-through to EntityView) to non-members.
+  const canRead = !isPrivate || isActiveMember;
   const canPost = space.postingPermission === "anyone"
     ? true
     : isActiveMember && (space.postingPermission !== "admins" || isAdmin);
