@@ -53,12 +53,15 @@ a { color: var(--accent); }
 .pill { font-size: 12px; background: #231f33; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; color: var(--muted); }
 .pill.danger { color: #f87171; border-color: #f87171; background: #2a1a1f; }
 /* Moderated-out content still visible to operators: dim + dashed red edge so it reads as redacted. */
-.card.redacted, .panel.redacted { border-style: dashed; border-color: #f87171; opacity: 0.72; }
+.card.redacted, .panel.redacted, .msg.redacted { border: 1px dashed #f87171; opacity: 0.72; }
 .center { display: grid; place-items: center; min-height: 100vh; }
 .login { width: 340px; }
 .spacer { flex: 1; }
 .msg { padding: 6px 10px; border-radius: 8px; background: #161320; margin-bottom: 6px; }
 .msg.mine { background: #2a2140; }
+/* Deep-linked (admin "view in demo") comment: accent ring + brief glow so it stands out on arrival. */
+.msg.highlight { border: 1px solid var(--accent); box-shadow: 0 0 0 2px rgba(217, 111, 176, 0.35); animation: msg-flash 1.6s ease-out; }
+@keyframes msg-flash { 0% { box-shadow: 0 0 0 3px rgba(217, 111, 176, 0.7); } 100% { box-shadow: 0 0 0 2px rgba(217, 111, 176, 0.2); } }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: #4ade80; } .dot.off { background: #f87171; }
 .error { color: #f87171; font-size: 13px; }

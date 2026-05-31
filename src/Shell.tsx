@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
 import Login from "./Login";
+import EntityView from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
 import Chat from "./Chat";
@@ -23,6 +24,25 @@ const TABS: { id: Tab; label: string }[] = [
 // Optional link to the separate admin app (opens in a new tab). Hidden when VITE_ADMIN_URL is unset.
 const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
 
+// Deep-link target captured from the URL query on load. The admin app links moderators straight to
+// the reported content via  ?entity=<id>[&comment=<id>]  — we open that entity (over the tabs) and,
+// for a comment report, scroll to/highlight the comment. Read once on mount; we then strip the
+// params from the URL so a refresh doesn't re-trigger and the bar stays clean.
+type DeepLink = { entityId: string; commentId?: string };
+function readDeepLink(): DeepLink | null {
+  const params = new URLSearchParams(window.location.search);
+  const entityId = params.get("entity");
+  if (!entityId) return null;
+  const commentId = params.get("comment") || undefined;
+  return { entityId, commentId };
+}
+function clearDeepLinkFromUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("entity");
+  url.searchParams.delete("comment");
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+}
+
 export default function Shell() {
   const { initialized, accessToken } = useAuth();
   const { user } = useUser();
@@ -33,16 +53,36 @@ export default function Shell() {
   // corrupted/duplicate accounts map). signOutAll wipes the whole map and returns us to Login.
   const { signOutAll } = useSignOutAll() as any;
   const [tab, setTab] = useState<Tab>("feed");
+  // Capture any ?entity=…&comment=… deep link once, synchronously, before the effect strips it from
+  // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
+  const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());
 
   // On load, if we came back from an OAuth round-trip the Agora server appended the minted tokens to
   // the URL fragment (#accessToken=…&refreshToken=…); pull them into the store + clean the URL.
+  // Then strip the deep-link query params so a refresh won't re-open the entity.
   useEffect(() => {
     handleOAuthCallback();
+    clearDeepLinkFromUrl();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!initialized) return <div className="center muted">Loading session…</div>;
   if (!accessToken) return <div className="center"><Login /></div>;
+
+  // A deep link wins over the tab UI: render the targeted entity full-bleed, with a back button
+  // that drops us onto the Feed tab. The reported comment (if any) is scrolled to + highlighted.
+  if (deepLink) {
+    return (
+      <div className="app">
+        <EntityView
+          entityId={deepLink.entityId}
+          highlightCommentId={deepLink.commentId}
+          onBack={() => { setDeepLink(null); setTab("feed"); }}
+          backLabel="← back to demo"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

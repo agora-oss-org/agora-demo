@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   EntityProvider, useEntity, useUser,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -88,19 +88,21 @@ export default function EntityView({
   entityId,
   onBack,
   backLabel = "← back",
+  highlightCommentId,
 }: {
   entityId: string;
   onBack: () => void;
   backLabel?: string;
+  highlightCommentId?: string;
 }) {
   return (
     <EntityProvider entityId={entityId}>
-      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} />
+      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} />
     </EntityProvider>
   );
 }
 
-function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () => void; backLabel: string }) {
+function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string }) {
   const { entity, updateEntity } = useEntity() as any;
   const { user } = useUser() as any;
   const [editing, setEditing] = useState(false);
@@ -178,7 +180,7 @@ function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () =
           </>
         )}
       </div>
-      {entity && <Comments entityId={entityId} />}
+      {entity && <Comments entityId={entityId} highlightCommentId={highlightCommentId} />}
     </div>
   );
 }
@@ -297,7 +299,7 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
 }
 
 // A single comment with its own upvote toggle (→ POST/DELETE /comments/:id/reactions).
-function CommentRow({ comment }: { comment: any }) {
+function CommentRow({ comment, highlighted }: { comment: any; highlighted?: boolean }) {
   const isReal = /^[0-9a-f-]{36}$/i.test(comment.id); // optimistic temp comments have a short id
   const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
     targetType: "comment",
@@ -305,10 +307,19 @@ function CommentRow({ comment }: { comment: any }) {
     initialReaction: comment.userReaction ?? null,
     initialReactionCounts: comment.reactionCounts,
   }) as any;
+  // Scroll a deep-linked comment into view once it's mounted (admin "view in demo" flow).
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (highlighted) ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlighted]);
+  // Same moderation contract as entities: a "removed" comment is hidden from everyone but
+  // operators, so when one renders here it's operator god-view — flag it as redacted.
+  const removed = isModeratedOut(comment);
   return (
-    <div className="msg">
+    <div ref={ref} className={"msg" + (removed ? " redacted" : "") + (highlighted ? " highlight" : "")}>
       <div className="prewrap">{comment.content}</div>
       <div className="row" style={{ marginTop: 4 }}>
+        <ModerationPill entity={comment} />
         <button
           className={currentReaction === "upvote" ? "primary" : ""}
           disabled={loading || !isReal}
@@ -333,7 +344,7 @@ function CommentRow({ comment }: { comment: any }) {
   );
 }
 
-function Comments({ entityId }: { entityId: string }) {
+function Comments({ entityId, highlightCommentId }: { entityId: string; highlightCommentId?: string }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
   const { comments, newComments, loading, createComment, loadMore, hasMore } = cs;
   const [text, setText] = useState("");
@@ -356,9 +367,17 @@ function Comments({ entityId }: { entityId: string }) {
   // the freshly-posted ones on top, so a new comment shows immediately.
   const all = [...((newComments as any[]) ?? []), ...((comments as any[]) ?? [])];
 
+  // A deep-linked comment may sit beyond the first page; tell the moderator to page in if so.
+  const highlightLoaded = !highlightCommentId || all.some((c: any) => c.id === highlightCommentId);
+
   return (
     <div className="panel col">
       <strong>Comments {loading ? "…" : `(${all.length})`}</strong>
+      {!loading && !highlightLoaded && (
+        <div className="muted">
+          🔗 The linked comment isn’t on this page yet — keep loading more to reach it.
+        </div>
+      )}
       <div className="col">
         <textarea
           placeholder="add a comment"
@@ -376,7 +395,7 @@ function Comments({ entityId }: { entityId: string }) {
       </div>
       <div className="scroll col">
         {all.map((c: any) => (
-          <CommentRow key={c.id} comment={c} />
+          <CommentRow key={c.id} comment={c} highlighted={!!highlightCommentId && c.id === highlightCommentId} />
         ))}
       </div>
       {hasMore && <button onClick={() => loadMore()}>Load more</button>}
