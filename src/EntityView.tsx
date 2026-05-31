@@ -55,12 +55,23 @@ function ReportButton({
   };
 
   return (
-    <details>
+    // position:relative anchors the popup; the summary stays inline in the row.
+    <details style={{ position: "relative" }}>
       <summary
         title={`Report this ${targetType}`}
         style={{ cursor: "pointer", listStyle: "none", fontSize: 12, color: "var(--muted)", padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 6 }}
       >🚩</summary>
-      <div className="col" style={{ gap: 4, padding: 8, marginTop: 4, border: "1px solid var(--border)", borderRadius: 8, minWidth: 240 }}>
+      {/* Float the form as a right-anchored dropdown so it never pushes off-screen on narrow/device
+          widths; width is viewport-capped and it opens leftward from the flag's right edge. */}
+      <div
+        className="col"
+        style={{
+          position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 30,
+          gap: 4, padding: 8, border: "1px solid var(--border)", borderRadius: 8,
+          width: "min(280px, calc(100vw - 32px))",
+          background: "var(--panel)", boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+        }}
+      >
         <strong style={{ fontSize: 13 }}>Report this {targetType}</strong>
         <label className="muted">Reason</label>
         <select value={reason} disabled={busy} onChange={(e) => setReason(e.target.value)}>
