@@ -41,10 +41,14 @@ input, textarea, select {
 a { color: var(--accent); }
 
 .app { max-width: 980px; margin: 0 auto; padding: 16px; }
-.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+/* Wrap on narrow/device widths: brand + controls drop to separate lines instead of overflowing. */
+.header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+/* The account/sign-out/admin cluster keeps to the right and wraps within itself when cramped. */
+.header .row { flex-wrap: wrap; justify-content: flex-end; }
 .brand { font-weight: 700; font-size: 20px; }
 .brand small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
-.tabs { display: flex; gap: 8px; margin: 16px 0; }
+/* Tabs wrap to a new line rather than running off-screen (e.g. "Connections" getting clipped). */
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .tabs button.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .row { display: flex; gap: 8px; align-items: center; }
