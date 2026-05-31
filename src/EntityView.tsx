@@ -240,14 +240,26 @@ export function isModeratedOut(entity: any): boolean {
   return entity?.moderationStatus === "removed";
 }
 
-// A 🚫 pill for redacted entities, with the moderation timestamp/reason in its tooltip. Renders
-// nothing for live content, so it's safe to drop into any entity card's pill row.
+// A moderator reviewed a report and chose to KEEP the content (moderationStatus "approved"). Unlike
+// "removed", kept content stays live for everyone — we just badge the resolved decision.
+export function isModeratedKept(entity: any): boolean {
+  return entity?.moderationStatus === "approved";
+}
+
+// A moderation-status pill for an entity or comment, with the moderator timestamp/reason in its
+// tooltip: 🚫 red for removed (redacted, operator-only), ✅ green for reviewed-and-kept. Renders
+// nothing for un-moderated content, so it's safe to drop into any card/comment pill row.
 export function ModerationPill({ entity }: { entity: any }) {
-  if (!isModeratedOut(entity)) return null;
+  const removed = isModeratedOut(entity);
+  const kept = isModeratedKept(entity);
+  if (!removed && !kept) return null;
   const when = entity.moderatedAt ? new Date(entity.moderatedAt).toLocaleString() : null;
-  const title = ["Removed by moderation", when && `· ${when}`, entity.moderationReason && `— ${entity.moderationReason}`]
+  const verb = removed ? "Removed by moderation" : "Reviewed and kept";
+  const title = [verb, when && `· ${when}`, entity.moderationReason && `— ${entity.moderationReason}`]
     .filter(Boolean).join(" ");
-  return <span className="pill danger" title={title}>🚫 removed</span>;
+  return removed
+    ? <span className="pill danger" title={title}>🚫 removed</span>
+    : <span className="pill success" title={title}>✅ kept</span>;
 }
 
 function EntityImages({ files }: { files?: any[] }) {
