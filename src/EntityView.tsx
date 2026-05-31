@@ -103,10 +103,26 @@ export default function EntityView({
 }
 
 function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string }) {
-  const { entity, updateEntity } = useEntity() as any;
+  const { entity, updateEntity, deleteEntity } = useEntity() as any;
   const { user } = useUser() as any;
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isOwner = !!(entity && user && entity.userId === user.id);
+
+  // Owner deletes their own post (→ DELETE /entities/:id via useEntity().deleteEntity). Confirm
+  // first (irreversible), then leave the now-gone entity via onBack. The server still authorizes,
+  // so a rejection (e.g. access changed) surfaces instead of silently failing.
+  const removeEntity = async () => {
+    if (!window.confirm("Delete this post? This can’t be undone.")) return;
+    setDeleting(true);
+    try {
+      await deleteEntity();
+      onBack();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || "Couldn’t delete this post.");
+      setDeleting(false);
+    }
+  };
 
   // Fail closed on read. The server is the real gate (it 403s entities in members-only spaces for
   // non-members), and this mirrors it client-side: never render an entity's body, reactions, or
@@ -171,7 +187,14 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
               <h3 style={{ margin: 0 }}>{entity?.title || "(untitled)"}</h3>
               <ModerationPill entity={entity} />
               <span className="spacer" />
-              {isOwner && <button onClick={() => setEditing(true)}>✏️ Edit</button>}
+              {isOwner && (
+                <>
+                  <button onClick={() => setEditing(true)} disabled={deleting}>✏️ Edit</button>
+                  <button className="danger" onClick={removeEntity} disabled={deleting}>
+                    {deleting ? "Deleting…" : "🗑️ Delete"}
+                  </button>
+                </>
+              )}
             </div>
             {/* preserve newlines/whitespace and wrap long unbroken strings so the full body shows */}
             <div className="prewrap">{entity?.content}</div>
@@ -244,6 +267,14 @@ export function isModeratedOut(entity: any): boolean {
 // "removed", kept content stays live for everyone — we just badge the resolved decision.
 export function isModeratedKept(entity: any): boolean {
   return entity?.moderationStatus === "approved";
+}
+
+// Reddit-style soft delete: deleting a comment doesn't drop it from the tree (so any replies
+// survive) — the SDK/server keep the row and blank it, setting userDeletedAt (and deletedAt after a
+// server refetch) while nulling content/userId. So a "still there but empty" row = successfully
+// deleted; render it as a tombstone, not a live comment.
+export function isDeletedComment(comment: any): boolean {
+  return !!(comment?.userDeletedAt || comment?.deletedAt);
 }
 
 // "Operator" here is the *deployment-operator* god-view, NOT the user's profile role. The server
@@ -333,8 +364,18 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
   );
 }
 
-// A single comment with its own upvote toggle (→ POST/DELETE /comments/:id/reactions).
-function CommentRow({ comment, highlighted }: { comment: any; highlighted?: boolean }) {
+// A single comment with its own upvote toggle (→ POST/DELETE /comments/:id/reactions), plus inline
+// edit + delete for the comment's author (→ PATCH/DELETE /comments/:id via the comment section's
+// updateComment/deleteComment, which keep the local tree in sync).
+function CommentRow({
+  comment, highlighted, currentUserId, onUpdate, onDelete,
+}: {
+  comment: any;
+  highlighted?: boolean;
+  currentUserId?: string;
+  onUpdate: (p: { commentId: string; content: string }) => Promise<void>;
+  onDelete: (p: { commentId: string }) => Promise<void>;
+}) {
   const isReal = /^[0-9a-f-]{36}$/i.test(comment.id); // optimistic temp comments have a short id
   const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
     targetType: "comment",
@@ -350,9 +391,62 @@ function CommentRow({ comment, highlighted }: { comment: any; highlighted?: bool
   // Same moderation contract as entities: a "removed" comment is hidden from everyone but
   // operators, so when one renders here it's operator god-view — flag it as redacted.
   const removed = isModeratedOut(comment);
+  // Edit/delete are author-only, and only for real (server-persisted) comments.
+  const isOwner = !!(currentUserId && comment.userId === currentUserId);
+  const canManage = isOwner && isReal;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(comment.content ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!draft.trim()) return;
+    setBusy(true); setErr(null);
+    try { await onUpdate({ commentId: comment.id, content: draft.trim() }); setEditing(false); }
+    catch (e: any) { setErr(e?.response?.data?.error || "Couldn’t save your edit."); }
+    finally { setBusy(false); }
+  };
+  const del = async () => {
+    if (!window.confirm("Delete this comment? This can’t be undone.")) return;
+    setBusy(true); setErr(null);
+    // On success the SDK marks it deleted in place (Reddit-style) and the row re-renders as the
+    // tombstone below; only reset busy on error.
+    try { await onDelete({ commentId: comment.id }); }
+    catch (e: any) { setErr(e?.response?.data?.error || "Couldn’t delete your comment."); setBusy(false); }
+  };
+
+  // A soft-deleted comment is kept in the tree but blanked — show a tombstone instead of empty
+  // content + live reaction/report controls. (All hooks above already ran, so the early return is
+  // safe.)
+  if (isDeletedComment(comment)) {
+    return (
+      <div ref={ref} className={"msg" + (highlighted ? " highlight" : "")}>
+        <span className="muted">🗑️ comment deleted</span>
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className={"msg" + (removed ? " redacted" : "") + (highlighted ? " highlight" : "")}>
-      <div className="prewrap">{comment.content}</div>
+      {editing ? (
+        <div className="col" style={{ gap: 4 }}>
+          <textarea
+            rows={3}
+            value={draft}
+            disabled={busy}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") save(); }}
+          />
+          {err && <div className="error">{err}</div>}
+          <div className="row">
+            <button onClick={() => { setEditing(false); setDraft(comment.content ?? ""); setErr(null); }} disabled={busy}>Cancel</button>
+            <span className="spacer" />
+            <button className="primary" onClick={save} disabled={busy || !draft.trim()}>{busy ? "Saving…" : "Save"}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="prewrap">{comment.content}</div>
+      )}
       <div className="row" style={{ marginTop: 4 }}>
         <ModerationPill entity={comment} />
         <button
@@ -373,15 +467,26 @@ function CommentRow({ comment, highlighted }: { comment: any; highlighted?: bool
         </button>
         <span className="muted">{new Date(comment.createdAt).toLocaleString()}</span>
         <span className="spacer" />
-        <ReportButton targetType="comment" targetId={comment.id} ownerId={comment.userId} disabled={!isReal} />
+        {canManage && !editing && (
+          <>
+            <button className="linklike" onClick={() => { setDraft(comment.content ?? ""); setErr(null); setEditing(true); }}>✏️ edit</button>
+            <button className="linklike" onClick={del} disabled={busy}>🗑️ delete</button>
+          </>
+        )}
+        {!isOwner && (
+          <ReportButton targetType="comment" targetId={comment.id} ownerId={comment.userId} disabled={!isReal} />
+        )}
       </div>
+      {/* surface a delete error that happens with the editor closed */}
+      {!editing && err && <div className="error" style={{ marginTop: 4 }}>{err}</div>}
     </div>
   );
 }
 
 function Comments({ entityId, highlightCommentId }: { entityId: string; highlightCommentId?: string }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
-  const { comments, newComments, loading, createComment, loadMore, hasMore } = cs;
+  const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore } = cs;
+  const { user } = useUser() as any;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -430,7 +535,14 @@ function Comments({ entityId, highlightCommentId }: { entityId: string; highligh
       </div>
       <div className="scroll col">
         {all.map((c: any) => (
-          <CommentRow key={c.id} comment={c} highlighted={!!highlightCommentId && c.id === highlightCommentId} />
+          <CommentRow
+            key={c.id}
+            comment={c}
+            highlighted={!!highlightCommentId && c.id === highlightCommentId}
+            currentUserId={user?.id}
+            onUpdate={updateComment}
+            onDelete={deleteComment}
+          />
         ))}
       </div>
       {hasMore && <button onClick={() => loadMore()}>Load more</button>}
