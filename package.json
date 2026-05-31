@@ -12,8 +12,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@agora-sdk/core": "^1.1.0",
-    "@agora-sdk/react-js": "^1.1.0",
+    "@agora-sdk/core": "^1.2.1",
+    "@agora-sdk/react-js": "^1.2.1",
     "@reduxjs/toolkit": "^2.2.7",
     "axios": "^1.7.9",
     "js-cookie": "^3.0.5",

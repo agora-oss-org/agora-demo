@@ -1,6 +1,7 @@
 # Agora demo
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 A standalone **Vite + React (TypeScript)** app that drives the real Agora SDK hooks
 (`@agora-sdk/react-js` + `@agora-sdk/core`) against a running Agora server. It's a 1:1
@@ -9,19 +10,22 @@ it usually points at a server ↔ SDK contract mismatch rather than an app bug.
 
 ## What it exercises
 
-| Tab | Surface |
-|-----|---------|
-| **Feed** | List/create entities, with optional image uploads |
-| *(entity)* | Open an entity for image display, reactions, comments (per-comment upvotes), and owner inline edit |
-| **Spaces** | Browse top-level spaces, then drill into subspaces and space-scoped entries |
-| **Search** | Semantic search (Voyage + pgvector); entity results open in place |
-| **Chat** | Realtime socket.io chat — groups and direct messages (open two tabs for live delivery) |
-| **Connections** | Typeahead user search, send/accept/decline/cancel connection requests |
+| Tab / area | SDK surface exercised |
+|------------|------------------------|
+| **Feed** | List entities with a selectable ranking algorithm (`hot` / `top` / `new` / `controversial` / `decay` / `gravity` / `wilson` / `bayesian`); create posts with multi-image uploads |
+| *(entity detail)* | Image display, up/down-vote reactions, comments (each up/down-votable), owner inline edit, and 🚩 reporting of the entity and individual comments |
+| **Spaces** | Browse and create **public or private** spaces; nested subspaces and space-scoped entries; request-to-join with admin approval, membership + leave; a per-space **chat channel**; and admin **digest-webhook** settings |
+| **Search** | Semantic search (Voyage + pgvector); entity hits open in place |
+| **Chat** | Realtime socket.io chat — groups and direct messages with **image/file attachments** and **group member management** (add connections, remove, leave). Open two tabs for live delivery |
+| **Connections** | Typeahead user search; send / accept / decline / cancel requests; sent and received pending |
 | **Inbox** | In-app notifications |
-| **Me** | Edit your profile (username, name, bio, avatar) |
+| **Me** | Edit your profile — username (with a **live availability check**), display name, bio, avatar |
+| *(header)* | Link out to the separate **Admin app** (`VITE_ADMIN_URL`), and a full sign-out |
 
-Auth is email/password against the server's `/auth` (Supabase-backed identity, Agora tokens),
-including the email-confirmation sign-up flow.
+Auth is **email/password** against the server's `/auth` (Supabase-backed identity, Agora tokens) —
+including the email-confirmation sign-up flow — plus **GitHub OAuth** (redirect flow). Private-space
+content fails closed client-side: a non-member can't read or interact with it, mirroring the
+server's gate.
 
 ## Quick start (local)
 
@@ -30,10 +34,10 @@ your server via `.env`.
 
 ```bash
 # 1. Boot the Agora server (separate terminal)
-cd ../agora/server && npm run dev                       # http://localhost:4000/v7
+cd ../agora-server/apps/api && npm run dev                       # http://localhost:4000/v7
 
 # 2. Seed a confirmed demo user (once)
-cd ../agora/server && node scripts/seed-demo-user.mjs   # agora-demo@gmail.com / DemoPass123!
+cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # agora-demo@gmail.com / DemoPass123!
 
 # 3. Run the demo
 npm install
@@ -51,6 +55,7 @@ verification is manual; `tsc -b` in the build is the only static check.
 | `VITE_API_BASE_URL` | Agora server base URL (e.g. `http://localhost:4000/v7`) |
 | `VITE_PROJECT_ID` | Project id passed to `ReplykeProvider` |
 | `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` | Prefilled login credentials |
+| `VITE_ADMIN_URL` | *(optional)* Admin app URL; shows an **Admin** link in the header when set |
 
 `VITE_API_BASE_URL` is parsed in `App.tsx` and passed to `ReplykeProvider` via its `baseUrl` prop.
 
@@ -99,12 +104,15 @@ GHCR auth uses the built-in `GITHUB_TOKEN`. Docker Hub needs repo secrets `DOCKE
 ## How it consumes the SDK
 
 The SDK is published to npm as `@agora-sdk/core` + `@agora-sdk/react-js` and listed as normal
-dependencies, so the build is fully self-contained (and containerizable). `vite.config.ts` only
-**dedupes** React/Redux to a single instance shared with the SDK — otherwise the SDK's hooks break.
+dependencies, so the build is fully self-contained (and containerizable). `vite.config.ts` **dedupes**
+React/Redux to a single instance shared with the SDK — otherwise the SDK's hooks break.
 
-To test against a **local SDK fork** instead, add a `resolve.alias` in `vite.config.ts` mapping the
-package names to the fork's built `dist/esm/index.js` (there's a commented example in the file), and
-rebuild the fork (`pnpm build-all`) after editing it.
+**Local-fork override:** if the sibling `../agora-sdk` repo is checked out *and built*
+(`pnpm build-all` → `packages/{core,react-js}/dist/esm` exist), `vite.config.ts` auto-detects it on
+disk and aliases the package names at that dist, so local SDK edits take effect without
+republishing (it logs `[vite] @agora-sdk → LOCAL fork` at boot; restart the dev server to pick up a
+newly-present fork). The check is on-disk, so the alias is automatically **off** in the Docker build
+context / CI — keeping the image self-contained on the npm packages.
 
 ## Architecture
 
@@ -114,6 +122,18 @@ library — tabs and in-tab drill-downs are conditional renders driven by local 
 hand-written `styles.css` (utility-ish classes, no framework).
 
 See [CLAUDE.md](./CLAUDE.md) for the per-file SDK-surface map and editing conventions.
+
+## Contributing
+
+**Contributors welcome!** 💜 This is a harness, so high-value contributions exercise a new SDK
+surface, tighten an existing one, or surface a server ↔ SDK contract mismatch — and "the demo
+broke" bug reports are genuinely useful, since they often expose a real server/SDK disagreement.
+
+New to the project? Pick a hook the demo doesn't drive yet and add a panel for it, or improve a
+panel's states and error handling. See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, the
+project conventions (one file per SDK surface, the `@agora-sdk` Replyke-fork gotchas, the `as any`
+style, fail-closed access), how to verify a change (`npm run build` + click through), and the PR
+workflow.
 
 ## License
 

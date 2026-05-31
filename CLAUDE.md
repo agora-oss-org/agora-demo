@@ -29,8 +29,8 @@ build's `tsc -b` is the only static check.
 ### Local stack (the demo needs an Agora server running)
 
 ```bash
-cd ../agora/server && npm run dev                       # 1. boot Agora server (separate terminal)
-cd ../agora/server && node scripts/seed-demo-user.mjs   # 2. seed demo user (once)
+cd ../agora-server/apps/api && npm run dev                       # 1. boot Agora server (separate terminal)
+cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # 2. seed demo user (once)
 npm install && npm run dev                              # 3. run this demo
 ```
 
