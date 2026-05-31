@@ -20,6 +20,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "profile", label: "👤 Me" },
 ];
 
+// Optional link to the separate admin app (opens in a new tab). Hidden when VITE_ADMIN_URL is unset.
+const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
+
 export default function Shell() {
   const { initialized, accessToken } = useAuth();
   const { user } = useUser();
@@ -50,6 +53,11 @@ export default function Shell() {
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
           </button>
           <button onClick={() => signOutAll()}>Sign out</button>
+          {ADMIN_URL && (
+            <button onClick={() => window.open(ADMIN_URL, "_blank", "noopener,noreferrer")} title="Open the admin app in a new tab">
+              🛠️ Admin
+            </button>
+          )}
         </div>
       </div>
 
