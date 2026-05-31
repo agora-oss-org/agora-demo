@@ -18,7 +18,7 @@ treated as a literal filter) — check the server route against what the SDK act
 ## Commands
 
 ```bash
-npm run dev       # Vite dev server → http://localhost:5173
+npm run dev       # Vite dev server → http://localhost:5174
 npm run build     # tsc -b (typecheck) + vite build
 npm run preview   # serve the production build
 ```
@@ -41,7 +41,7 @@ it at `http://localhost:4000/v7` to test against a local server.
 ### Docker
 
 ```bash
-docker compose up --build     # Vite dev container (HMR) → http://localhost:5173
+docker compose up --build     # Vite dev container (HMR) → http://localhost:5174
 ```
 
 Dev container only (no nginx/prod image). `VITE_*` are baked from build args and overridable at

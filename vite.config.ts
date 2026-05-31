@@ -30,11 +30,11 @@ export default defineConfig({
   server: {
     // Bind all interfaces (IPv4 0.0.0.0 + IPv6 ::) so both `localhost`→127.0.0.1 and ::1 reach
     // the dev server — and so the server is reachable from outside a container. Vite's default
-    // binds IPv6-only, which made Supabase email-confirmation links (redirect_to=localhost:5173)
-    // fail in browsers that resolve localhost to IPv4. strictPort keeps us on 5173 so the Supabase
+    // binds IPv6-only, which made Supabase email-confirmation links (redirect_to=localhost:5174)
+    // fail in browsers that resolve localhost to IPv4. strictPort keeps us on 5174 so the Supabase
     // Site URL stays valid.
     host: true,
-    port: 5173,
+    port: 5174,
     strictPort: true,
     // Allow the proxied hostname Caddy serves this dev server under. A leading dot matches the
     // domain and all subdomains, so this covers agora-demo.intra.recoverysky.net and any future

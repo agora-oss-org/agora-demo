@@ -1,6 +1,6 @@
 # Convenience wrapper for the Agora demo dev container.
 #
-#   docker compose up --build          # build + run, http://localhost:5173
+#   docker compose up --build          # build + run, http://localhost:5174
 #   VITE_API_BASE_URL=http://host.docker.internal:4000/v7 docker compose up   # point at a host server
 #
 # The bind mount gives you HMR from host edits; the anonymous volume keeps the image's
@@ -15,7 +15,7 @@ services:
         VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-demo@gmail.com}
         VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-DemoPass123!}
     ports:
-      - "5173:5173"
+      - "5174:5174"
     environment:
       # Runtime overrides — Vite reads these on dev-server start, no rebuild needed.
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://agora.recoverysky.net/v7}
