@@ -6,7 +6,7 @@ import {
   useFetchSpaceConversation, ConversationProvider, useConversationContext,
   useFetchDigestConfig, useUpdateDigestConfig,
 } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 
 // A single space: shows its subspaces (with a create-subspace form) and its entries (with the
@@ -209,8 +209,11 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
       </div>
       <div className="muted">{ents.loading ? "Loading…" : `${ents.entities?.length ?? 0} entries`}</div>
       {(ents.entities ?? []).map((e: any) => (
-        <div key={e.id} className="card" onClick={() => setSelectedEntity(e.id)} style={{ cursor: "pointer" }}>
-          <h4>{e.title || "(untitled)"}</h4>
+        <div key={e.id} className={"card" + (isModeratedOut(e) ? " redacted" : "")} onClick={() => setSelectedEntity(e.id)} style={{ cursor: "pointer" }}>
+          <div className="row">
+            <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
+            <ModerationPill entity={e} />
+          </div>
           <div className="clamp3">{e.content}</div>
           {(() => {
             const src = (e.files ?? []).map(fileImageSrc).find(Boolean);

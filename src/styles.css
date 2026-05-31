@@ -51,6 +51,9 @@ a { color: var(--accent); }
 .card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #161320; }
 .card h4 { margin: 0 0 4px; }
 .pill { font-size: 12px; background: #231f33; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; color: var(--muted); }
+.pill.danger { color: #f87171; border-color: #f87171; background: #2a1a1f; }
+/* Moderated-out content still visible to operators: dim + dashed red edge so it reads as redacted. */
+.card.redacted, .panel.redacted { border-style: dashed; border-color: #f87171; opacity: 0.72; }
 .center { display: grid; place-items: center; min-height: 100vh; }
 .login { width: 340px; }
 .spacer { flex: 1; }

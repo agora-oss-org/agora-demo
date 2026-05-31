@@ -140,10 +140,23 @@ function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () =
     );
   }
 
+  const removed = isModeratedOut(entity);
   return (
     <div className="col">
       <button onClick={onBack}>{backLabel}</button>
-      <div className="panel col">
+      {removed && (
+        <div className="error col" style={{ gap: 4 }}>
+          <div>
+            🚫 This entity was removed by moderation
+            {entity.moderatedAt ? ` on ${new Date(entity.moderatedAt).toLocaleString()}` : ""}. You can
+            see it because you have operator access; other users cannot.
+          </div>
+          {entity.moderationReason && (
+            <div className="prewrap">📝 Reason: {entity.moderationReason}</div>
+          )}
+        </div>
+      )}
+      <div className={"panel col" + (removed ? " redacted" : "")}>
         {editing ? (
           <EntityEditor
             entity={entity}
@@ -154,6 +167,7 @@ function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () =
           <>
             <div className="row">
               <h3 style={{ margin: 0 }}>{entity?.title || "(untitled)"}</h3>
+              <ModerationPill entity={entity} />
               <span className="spacer" />
               {isOwner && <button onClick={() => setEditing(true)}>✏️ Edit</button>}
             </div>
@@ -215,6 +229,23 @@ export function fileImageSrc(file: any): string | null {
   if (!file || file.type !== "image") return null;
   const v = file.image?.variants ?? {};
   return v.medium?.publicPath || v.small?.publicPath || v.thumbnail?.publicPath || file.originalPath || null;
+}
+
+// An entity is "removed" once a moderator takes it down. The server hides removed entities from
+// everyone EXCEPT operators (god-view), so when we render one it's because the viewer is privileged —
+// flag it as redacted rather than passing it off as live content.
+export function isModeratedOut(entity: any): boolean {
+  return entity?.moderationStatus === "removed";
+}
+
+// A 🚫 pill for redacted entities, with the moderation timestamp/reason in its tooltip. Renders
+// nothing for live content, so it's safe to drop into any entity card's pill row.
+export function ModerationPill({ entity }: { entity: any }) {
+  if (!isModeratedOut(entity)) return null;
+  const when = entity.moderatedAt ? new Date(entity.moderatedAt).toLocaleString() : null;
+  const title = ["Removed by moderation", when && `· ${when}`, entity.moderationReason && `— ${entity.moderationReason}`]
+    .filter(Boolean).join(" ");
+  return <span className="pill danger" title={title}>🚫 removed</span>;
 }
 
 function EntityImages({ files }: { files?: any[] }) {

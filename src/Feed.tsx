@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
@@ -45,8 +45,11 @@ export default function Feed() {
 
       <div className="muted">{loading ? "Loading…" : `${entities?.length ?? 0} entities · sorted by ${sortBy}`}</div>
       {(entities ?? []).map((e: any) => (
-        <div key={e.id} className="card" onClick={() => setSelected(e.id)} style={{ cursor: "pointer" }}>
-          <h4>{e.title || "(untitled)"}</h4>
+        <div key={e.id} className={"card" + (isModeratedOut(e) ? " redacted" : "")} onClick={() => setSelected(e.id)} style={{ cursor: "pointer" }}>
+          <div className="row">
+            <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
+            <ModerationPill entity={e} />
+          </div>
           <div className="clamp3">{e.content}</div>
           {(() => {
             const src = (e.files ?? []).map(fileImageSrc).find(Boolean);
