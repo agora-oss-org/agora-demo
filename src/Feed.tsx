@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc } from "./EntityView";
 import CreateEntity from "./CreateEntity";
-import FeedSettings from "./FeedSettings";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
-// ranking algorithm per request (hot/decay/gravity/…); the ⚙️ panel edits the project-wide default.
+// ranking algorithm per request (hot/decay/gravity/…).
 const SORTS = ["hot", "top", "new", "controversial", "decay", "gravity", "wilson", "bayesian"];
 
 export default function Feed() {
@@ -14,7 +13,6 @@ export default function Feed() {
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [sortBy, setSortBy] = useState("hot");
-  const [showSettings, setShowSettings] = useState(false);
 
   const refresh = (sort = sortBy) => fetchEntities({}, { sortBy: sort }, { limit: 20 });
 
@@ -41,12 +39,9 @@ export default function Feed() {
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ width: "auto" }}>
           {SORTS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <button onClick={() => setShowSettings((v) => !v)} title="feed ranking settings">⚙️</button>
         <span className="spacer" />
         <button className="primary" onClick={() => setCreating(true)}>➕ New post</button>
       </div>
-
-      {showSettings && <FeedSettings />}
 
       <div className="muted">{loading ? "Loading…" : `${entities?.length ?? 0} entities · sorted by ${sortBy}`}</div>
       {(entities ?? []).map((e: any) => (
