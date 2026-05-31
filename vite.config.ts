@@ -36,6 +36,10 @@ export default defineConfig({
     host: true,
     port: 5174,
     strictPort: true,
+    // Fall back to polling for file changes: this machine's fsevents-based recursive watch wasn't
+    // delivering change events to Vite (native fs.watch worked, but chokidar/HMR saw nothing), so
+    // saves didn't hot-reload. Polling sidesteps fsevents at a small CPU cost.
+    watch: { usePolling: true, interval: 120 },
     // Allow the proxied hostname Caddy serves this dev server under. A leading dot matches the
     // domain and all subdomains, so this covers agora-demo.intra.recoverysky.net and any future
     // intra route. localhost/127.0.0.1 are always allowed implicitly.
