@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   EntityProvider, useEntity, useUser,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -106,6 +106,40 @@ function Inner({ entityId, onBack, backLabel }: { entityId: string; onBack: () =
   const [editing, setEditing] = useState(false);
   const isOwner = !!(entity && user && entity.userId === user.id);
 
+  // Fail closed on read. The server is the real gate (it 403s entities in members-only spaces for
+  // non-members), and this mirrors it client-side: never render an entity's body, reactions, or
+  // comment box until we've confirmed it loaded. The SDK leaves `entity` undefined while loading
+  // AND when the fetch is rejected (a 403 is only logged — it never flips to null), so we can't
+  // tell "loading" from "denied" by value alone. Use a grace window: still-undefined after it
+  // elapses ⇒ treat as unavailable rather than spinning forever or flashing an empty "(untitled)".
+  const [graceElapsed, setGraceElapsed] = useState(false);
+  useEffect(() => {
+    setGraceElapsed(false);
+    const t = setTimeout(() => setGraceElapsed(true), 5000);
+    return () => clearTimeout(t);
+  }, [entityId]);
+
+  const unavailable = entity === null || (entity === undefined && graceElapsed);
+  if (unavailable) {
+    return (
+      <div className="col">
+        <button onClick={onBack}>{backLabel}</button>
+        <div className="panel muted">
+          🔒 This content isn’t available. It may have been removed, or it lives in a members-only
+          space you don’t have access to.
+        </div>
+      </div>
+    );
+  }
+  if (!entity) {
+    return (
+      <div className="col">
+        <button onClick={onBack}>{backLabel}</button>
+        <div className="panel muted">Loading…</div>
+      </div>
+    );
+  }
+
   return (
     <div className="col">
       <button onClick={onBack}>{backLabel}</button>
@@ -207,23 +241,24 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
     initialReaction: entity.userReaction ?? null,
     initialReactionCounts: entity.reactionCounts,
   }) as any;
+  const [err, setErr] = useState<string | null>(null);
+  // The server gates reactions behind read access; if it rejects (e.g. access changed under us),
+  // surface it instead of letting the optimistic toggle silently desync.
+  const react = async (reactionType: string) => {
+    setErr(null);
+    try { await toggleReaction({ reactionType }); }
+    catch (e: any) { setErr(e?.response?.data?.error || "Couldn't save your reaction."); }
+  };
   return (
     <div className="row">
-      <button
-        className={currentReaction === "upvote" ? "primary" : ""}
-        disabled={loading}
-        onClick={() => toggleReaction({ reactionType: "upvote" })}
-      >
+      <button className={currentReaction === "upvote" ? "primary" : ""} disabled={loading} onClick={() => react("upvote")}>
         ⬆ Upvote ({reactionCounts?.upvote ?? 0})
       </button>
-      <button
-        className={currentReaction === "downvote" ? "primary" : ""}
-        disabled={loading}
-        onClick={() => toggleReaction({ reactionType: "downvote" })}
-      >
+      <button className={currentReaction === "downvote" ? "primary" : ""} disabled={loading} onClick={() => react("downvote")}>
         ⬇ Downvote ({reactionCounts?.downvote ?? 0})
       </button>
       <span className="muted">your reaction: {currentReaction ?? "none"}</span>
+      {err && <span className="error">{err}</span>}
       <span className="spacer" />
       <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} />
     </div>
@@ -272,11 +307,17 @@ function Comments({ entityId }: { entityId: string }) {
   const { comments, newComments, loading, createComment, loadMore, hasMore } = cs;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const post = async () => {
     if (!text.trim()) return;
     setBusy(true);
-    try { await createComment({ content: text }); setText(""); } finally { setBusy(false); }
+    setErr(null);
+    // The server requires read access to comment (assertCanReadEntity); show its rejection rather
+    // than dropping the comment silently.
+    try { await createComment({ content: text }); setText(""); }
+    catch (e: any) { setErr(e?.response?.data?.error || "Couldn't post your comment — you may not have access."); }
+    finally { setBusy(false); }
   };
 
   // The SDK keeps optimistically-added comments (the ones you just posted) in a separate
@@ -297,6 +338,7 @@ function Comments({ entityId }: { entityId: string }) {
         />
         <div className="row">
           <span className="muted">⌘/Ctrl + Enter to post</span>
+          {err && <span className="error">{err}</span>}
           <span className="spacer" />
           <button className="primary" disabled={busy} onClick={post}>Post</button>
         </div>
