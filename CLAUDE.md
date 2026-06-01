@@ -61,7 +61,11 @@ instance (otherwise hooks break).
 fork checked out next to the demo **and built**), it aliases the package names at that dist so local
 SDK edits take effect without republishing — it logs `[vite] @agora-sdk → LOCAL fork` at boot.
 **Rebuild the fork (`pnpm build-all` in `../agora-sdk`) after editing it, and restart this dev server
-to pick up a newly-present alias** (Vite reads config only at boot). The check is on-disk, so the
+to pick up a newly-present alias** (Vite reads config only at boot). **When you change the *contents*
+of an already-aliased dist (not add a new one), also clear Vite's pre-bundle —
+`rm -rf node_modules/.vite` (or `pnpm run dev --force`) — then restart; `optimizeDeps` fingerprints
+the cache on package version, not the aliased file's bytes, so a plain restart keeps serving the
+stale bundle.** The check is on-disk, so the
 alias is automatically **off in the Docker build context / CI** (build context is the demo dir only —
 no sibling — so the `npm ci`'d packages are used), keeping the image self-contained. To force npm
 even locally, remove/rename the fork's `dist`, or temporarily blank the alias.
