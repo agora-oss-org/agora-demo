@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, AuthorTag } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
@@ -14,7 +14,8 @@ export default function Feed() {
   const [creating, setCreating] = useState(false);
   const [sortBy, setSortBy] = useState("hot");
 
-  const refresh = (sort = sortBy) => fetchEntities({}, { sortBy: sort }, { limit: 20 });
+  // include: ["user"] so each card can show its author (the 3rd fetchEntities arg is the config).
+  const refresh = (sort = sortBy) => fetchEntities({}, { sortBy: sort }, { limit: 20, include: ["user"] });
 
   // Refetch whenever the chosen algorithm changes (also covers the initial load).
   useEffect(() => {
@@ -49,6 +50,8 @@ export default function Feed() {
           <div className="row">
             <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
             <ModerationPill entity={e} />
+            <span className="spacer" />
+            <AuthorTag user={e.user} />
           </div>
           <div className="clamp3">{e.content}</div>
           {(() => {

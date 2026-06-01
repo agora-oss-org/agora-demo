@@ -106,8 +106,13 @@ export default function EntityView({
   backLabel?: string;
   highlightCommentId?: string;
 }) {
+  // include:["user"] loads the entity author so the detail title shows who posted it. Cast to any:
+  // the published @agora-sdk types still lag the local fork that adds `include` to EntityProvider
+  // (see docs/CR-2026-05-31-entityprovider-include.md). The fork supplies the runtime via the vite
+  // alias; drop the cast once the package is republished with the include support and reinstalled.
+  const providerProps = { entityId, include: ["user"] } as any;
   return (
-    <EntityProvider entityId={entityId}>
+    <EntityProvider {...providerProps}>
       <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} />
     </EntityProvider>
   );
@@ -197,6 +202,8 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
             <div className="row">
               <h3 style={{ margin: 0 }}>{entity?.title || "(untitled)"}</h3>
               <ModerationPill entity={entity} />
+              {/* Renders once the SDK supports include=user on EntityProvider (see the CR). */}
+              <AuthorTag user={entity?.user} />
               <span className="spacer" />
               {isOwner && (
                 <>
@@ -265,6 +272,24 @@ export function fileImageSrc(file: any): string | null {
   if (!file || file.type !== "image") return null;
   const v = file.image?.variants ?? {};
   return v.medium?.publicPath || v.small?.publicPath || v.thumbnail?.publicPath || file.originalPath || null;
+}
+
+// Small author chip: avatar (when present) + @username / name. The `user` object only rides along
+// when the request asked for include=user — the feed list and comment section do, so it renders
+// there. The single-entity detail view won't have it until the SDK threads include through
+// EntityProvider (see docs/CR-2026-05-31-entityprovider-include.md); this renders nothing until then.
+export function AuthorTag({ user, prefix = "by " }: { user?: any; prefix?: string }) {
+  if (!user) return null;
+  const name = user.username ? "@" + user.username : (user.name || user.id?.slice(0, 8) || "someone");
+  return (
+    <span className="row muted" style={{ gap: 4, fontSize: 12 }}>
+      {prefix}
+      {user.avatar ? (
+        <img src={user.avatar} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+      ) : null}
+      {name}
+    </span>
+  );
 }
 
 // An entity is "removed" once a moderator takes it down. The server hides removed entities from
@@ -456,7 +481,10 @@ function CommentRow({
           </div>
         </div>
       ) : (
-        <div className="prewrap">{comment.content}</div>
+        <>
+          {comment.user && <AuthorTag user={comment.user} prefix="" />}
+          <div className="prewrap">{comment.content}</div>
+        </>
       )}
       <div className="row" style={{ marginTop: 4 }}>
         <ModerationPill entity={comment} />
