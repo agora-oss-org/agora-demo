@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -33,11 +34,47 @@ function ReportButton({
 }) {
   const { user } = useUser() as any;
   const createReport = useCreateReport({ type: targetType }) as any;
+  const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>("spam");
   const [details, setDetails] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  const PANEL_W = 280;
+  const PANEL_H = 260; // approx, only used to decide whether to flip the panel upward
+
+  // Position the portal panel in viewport coords, anchored to the flag: right-aligned and below it,
+  // flipped above when there isn't room below, clamped to stay on-screen.
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const left = Math.max(8, Math.min(r.right - PANEL_W, window.innerWidth - PANEL_W - 8));
+    const roomBelow = window.innerHeight - r.bottom;
+    const top = roomBelow > PANEL_H + 8 ? r.bottom + 4 : Math.max(8, r.top - PANEL_H - 4);
+    setPos({ left, top });
+  };
+
+  // While open, keep the panel glued to the flag across scrolls (capture catches inner scroll
+  // containers too) and resizes; Escape closes. Rendered in a portal so the comments' overflow box
+  // can't clip it — the bug this replaces: a short comments area cut off the bottom of the dialog.
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const on = () => place();
+    window.addEventListener("scroll", on, true);
+    window.addEventListener("resize", on);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", on, true);
+      window.removeEventListener("resize", on);
+      window.removeEventListener("keydown", onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (disabled) return null;
   if (user && ownerId && user.id === ownerId) return null;
@@ -47,7 +84,7 @@ function ReportButton({
     setBusy(true); setErr(null);
     try {
       await createReport({ targetId, reason, details: details.trim() || undefined });
-      setDone(true);
+      setDone(true); setOpen(false);
       setReason("spam"); setDetails("");
     } catch (e: any) {
       setErr(e?.response?.data?.error || e?.message || "Couldn't submit report");
@@ -55,43 +92,49 @@ function ReportButton({
   };
 
   return (
-    // position:relative anchors the popup; the summary stays inline in the row.
-    <details style={{ position: "relative" }}>
-      <summary
+    <>
+      <button
+        ref={btnRef}
         title={`Report this ${targetType}`}
-        style={{ cursor: "pointer", listStyle: "none", fontSize: 12, color: "var(--muted)", padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 6 }}
-      >🚩</summary>
-      {/* Float the form as a right-anchored dropdown so it never pushes off-screen on narrow/device
-          widths; width is viewport-capped and it opens leftward from the flag's right edge. */}
-      <div
-        className="col"
-        style={{
-          position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 30,
-          gap: 4, padding: 8, border: "1px solid var(--border)", borderRadius: 8,
-          width: "min(280px, calc(100vw - 32px))",
-          background: "var(--panel)", boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
-        }}
-      >
-        <strong style={{ fontSize: 13 }}>Report this {targetType}</strong>
-        <label className="muted">Reason</label>
-        <select value={reason} disabled={busy} onChange={(e) => setReason(e.target.value)}>
-          {REPORT_REASONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
-        <label className="muted">Details (optional)</label>
-        <textarea
-          placeholder="anything that would help a moderator…"
-          rows={2}
-          disabled={busy}
-          value={details}
-          onChange={(e) => setDetails(e.target.value)}
-        />
-        {err && <div className="error">{err}</div>}
-        <div className="row">
-          <span className="spacer" />
-          <button className="primary" disabled={busy} onClick={submit}>{busy ? "Submitting…" : "Submit report"}</button>
-        </div>
-      </div>
-    </details>
+        onClick={() => setOpen((o) => !o)}
+        style={{ fontSize: 12, color: "var(--muted)", padding: "2px 6px", border: "1px solid var(--border)", borderRadius: 6, background: "var(--panel)" }}
+      >🚩</button>
+      {open && pos && createPortal(
+        <>
+          {/* click-away backdrop */}
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1000 }} />
+          <div
+            className="col"
+            style={{
+              position: "fixed", left: pos.left, top: pos.top, zIndex: 1001,
+              gap: 4, padding: 8, border: "1px solid var(--border)", borderRadius: 8,
+              width: `min(${PANEL_W}px, calc(100vw - 16px))`,
+              background: "var(--panel)", boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+            }}
+          >
+            <strong style={{ fontSize: 13 }}>Report this {targetType}</strong>
+            <label className="muted">Reason</label>
+            <select value={reason} disabled={busy} onChange={(e) => setReason(e.target.value)}>
+              {REPORT_REASONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </select>
+            <label className="muted">Details (optional)</label>
+            <textarea
+              placeholder="anything that would help a moderator…"
+              rows={2}
+              disabled={busy}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+            />
+            {err && <div className="error">{err}</div>}
+            <div className="row">
+              <span className="spacer" />
+              <button className="primary" disabled={busy} onClick={submit}>{busy ? "Submitting…" : "Submit report"}</button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   );
 }
 
