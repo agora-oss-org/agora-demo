@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+// Client env: load the VITE_* vars from env.vite (instead of the default .env, which holds only the
+// un-prefixed secret key and must never reach the bundle). Vite exposes process.env VITE_* to
+// import.meta.env, so populating process.env here points the client build at env.vite. Guarded by an
+// on-disk check so Docker/CI — where VITE_* arrive straight from the environment and env.vite is
+// absent — keep working. Native to Node ≥20.12, so no dotenv dependency.
+const envViteFile = fileURLToPath(new URL("./env.vite", import.meta.url));
+if (existsSync(envViteFile)) (process as { loadEnvFile(path: string): void }).loadEnvFile(envViteFile);
+
 // SDK source resolution:
 // - By default the SDK is the published npm packages @agora-sdk/core + @agora-sdk/react-js (real
 //   dependencies), so the build is self-contained — which is what makes it containerizable.

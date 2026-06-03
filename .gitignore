@@ -3,3 +3,7 @@ dist/
 *.log
 .DS_Store
 *.tsbuildinfo
+# Local env files — secrets (.env) and client vars (env.vite). Keep both out of git; commit
+# *.example templates instead.
+.env
+env.vite
