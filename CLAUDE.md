@@ -34,9 +34,21 @@ cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # 2. seed demo 
 npm install && npm run dev                              # 3. run this demo
 ```
 
-Login is prefilled from `.env` (`VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD`). By default `.env`
-points `VITE_API_BASE_URL` at the **deployed** server (`https://agora.recoverysky.net/v7`); point
-it at `http://localhost:4000/v7` to test against a local server.
+Env is split in two — **both gitignored**; copy the committed `*.example` templates to start:
+
+- **`env.vite`** (← `env.vite.example`) — most of the client `VITE_*` vars. `vite.config.ts` loads
+  it via Node's native `process.loadEnvFile`, and Vite inlines `VITE_*` into the bundle:
+  `VITE_API_BASE_URL` (the example defaults to a local server `http://localhost:4000/v7`; set
+  `https://agora.recoverysky.net/v7` to test the deployed one), `VITE_DEMO_EMAIL`, `VITE_ADMIN_URL`,
+  and the Umami tracker vars.
+- **`.env`** (← `.env.example`) — `AGORA_UMAMI_API_KEY` (a true secret: **not** `VITE_`-prefixed, so
+  Vite never bundles it — the server-side Umami *reporting* key) **plus** `VITE_DEMO_PASSWORD` (the
+  login prefill — it *is* `VITE_`-prefixed and Vite reads `.env` by default, so it still ships in the
+  bundle as the prefill needs; kept beside the other credential).
+
+The `env.vite` load is guarded by an on-disk check, so in Docker/CI — where `env.vite` is absent and
+`VITE_*` arrive from build args / `-e` — it's skipped and the vars are read straight from the
+environment.
 
 ### Docker
 
@@ -116,3 +128,10 @@ header comment):
   interval to surface accepted/incoming requests.
 - Styling is one hand-written `styles.css` with utility-ish classes (`col`, `row`, `panel`, `card`,
   `pill`, `msg`, `mine`, `muted`, `spacer`, `prewrap`, `clamp3`, `linklike`). No CSS framework.
+- Analytics is Umami, centralized in `src/analytics.ts` — call `track(event, data?)` /
+  `trackPageView(path)` (never touch `window.umami` directly; the script is injected once via
+  `loadUmami()` in `main.tsx`). Event names are a flat `snake_case` `AnalyticsEvent` union, so a
+  typo fails the build. Navigation is page views (`PATHS.*`, this no-router SPA records them
+  explicitly per tab + detail); product actions are events, fired **on success** with
+  low-cardinality enums/booleans only — **never IDs or free text**. The reporting API key stays
+  server-side (see the env split above).
