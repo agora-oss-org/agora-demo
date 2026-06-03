@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { track, trackPageView, PATHS } from "./analytics";
+import { useProfileViewer } from "./ProfileViewerContext";
 import {
   EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -328,15 +329,25 @@ export function fileImageSrc(file: any): string | null {
 // there. The single-entity detail view won't have it until the SDK threads include through
 // EntityProvider (see docs/CR-2026-05-31-entityprovider-include.md); this renders nothing until then.
 export function AuthorTag({ user, prefix = "by " }: { user?: any; prefix?: string }) {
+  const { openProfile } = useProfileViewer();
   if (!user) return null;
   const name = user.username ? "@" + user.username : (user.name || user.id?.slice(0, 8) || "someone");
+  // Clickable when we know the user's id → opens their public profile overlay. stopPropagation so
+  // clicking the author inside a feed card / comment doesn't also trigger the card's own onClick
+  // (which would open the entity instead).
+  const clickable = !!user.id;
   return (
-    <span className="row muted" style={{ gap: 4, fontSize: 12 }}>
+    <span
+      className="row muted"
+      style={{ gap: 4, fontSize: 12, cursor: clickable ? "pointer" : undefined }}
+      onClick={clickable ? (e) => { e.stopPropagation(); openProfile(user.id); } : undefined}
+      title={clickable ? "View profile" : undefined}
+    >
       {prefix}
       {user.avatar ? (
         <img src={user.avatar} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
       ) : null}
-      {name}
+      <span className={clickable ? "linklike" : undefined} style={clickable ? { padding: 0, fontSize: 12 } : undefined}>{name}</span>
     </span>
   );
 }

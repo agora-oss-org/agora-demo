@@ -54,6 +54,7 @@ export const PATHS = {
   entity: "/entity",
   space: "/space",
   conversation: "/conversation",
+  user: "/user",
 } as const;
 
 type TrackProps = Record<string, unknown>;

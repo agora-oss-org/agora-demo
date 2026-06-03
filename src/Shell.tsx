@@ -3,6 +3,7 @@ import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/reac
 import Login from "./Login";
 import useTokenRefresh from "./useTokenRefresh";
 import { track, trackPageView, PATHS } from "./analytics";
+import { ProfileViewerProvider } from "./ProfileViewer";
 import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
@@ -93,20 +94,16 @@ export default function Shell() {
 
   // A deep link wins over the tab UI: render the targeted entity full-bleed, with a back button
   // that drops us onto the Feed tab. The reported comment (if any) is scrolled to + highlighted.
-  if (deepLink) {
-    return (
-      <div className="app">
-        <EntityView
-          entityId={deepLink.entityId}
-          highlightCommentId={deepLink.commentId}
-          onBack={() => { setDeepLink(null); setTab("feed"); }}
-          backLabel="← back to demo"
-        />
-      </div>
-    );
-  }
-
-  return (
+  const body = deepLink ? (
+    <div className="app">
+      <EntityView
+        entityId={deepLink.entityId}
+        highlightCommentId={deepLink.commentId}
+        onBack={() => { setDeepLink(null); setTab("feed"); }}
+        backLabel="← back to demo"
+      />
+    </div>
+  ) : (
     <div className="app">
       <div className="header">
         <div className="brand">🏛️ Agora <small>demo · @agora SDK → your Agora server</small></div>
@@ -139,5 +136,16 @@ export default function Shell() {
       {tab === "notifications" && <Notifications />}
       {tab === "profile" && <Profile />}
     </div>
+  );
+
+  // Provide the public-profile overlay above everything (deep link + tabs), so any AuthorTag can
+  // open a profile. "Edit profile →" on your own profile drops the overlay and jumps to the Me tab.
+  return (
+    <ProfileViewerProvider
+      currentUserId={user?.id}
+      onEditOwnProfile={() => { setDeepLink(null); setTab("profile"); }}
+    >
+      {body}
+    </ProfileViewerProvider>
   );
 }
