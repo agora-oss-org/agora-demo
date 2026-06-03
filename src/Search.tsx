@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchContent } from "@agora-sdk/react-js";
-import EntityView from "./EntityView";
+import EntityView, { isModeratedOut, ModerationPill } from "./EntityView";
 import { track } from "./analytics";
 
 // Semantic search via the SDK's useSearchContent → POST /v7/:project/search/content (Voyage + pgvector).
@@ -41,14 +41,21 @@ export default function Search() {
       <div className="muted">{loading ? "Searching…" : `${results?.length ?? 0} results (by semantic similarity)`}</div>
       {(results ?? []).map((r: any, i: number) => {
         const isEntity = r.sourceType === "entity" && r.record?.id;
+        // Removed content reaches search only for operators (the server hides it from everyone else),
+        // same as the feed — so flag it with the same redacted styling + pill instead of passing it
+        // off as live content (mirrors Feed.tsx).
+        const removed = isEntity && isModeratedOut(r.record);
         return (
           <div
             key={r.record?.id ?? i}
-            className="card"
+            className={"card" + (removed ? " redacted" : "")}
             onClick={isEntity ? () => setSelected(r.record.id) : undefined}
             style={isEntity ? { cursor: "pointer" } : undefined}
           >
-            <h4>{r.record?.title || "(untitled)"}</h4>
+            <div className="row">
+              <h4 style={{ margin: 0 }}>{r.record?.title || "(untitled)"}</h4>
+              {isEntity && <ModerationPill entity={r.record} />}
+            </div>
             <div className="clamp3">{r.record?.content}</div>
             <div className="row" style={{ marginTop: 6 }}>
               <span className="muted">
