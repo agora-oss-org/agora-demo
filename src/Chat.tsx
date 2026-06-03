@@ -10,6 +10,7 @@ import {
   useConversationContext,
 } from "@agora-sdk/react-js";
 import { fileImageSrc } from "./EntityView";
+import { track, trackPageView, PATHS } from "./analytics";
 
 // Realtime chat. The list comes from useConversations; the open thread is wrapped in
 // ConversationProvider, which (a) joins the socket.io room so message:created events arrive live
@@ -36,6 +37,7 @@ export default function Chat() {
 
   const create = async () => {
     const convo = await createGroup({ name: name || `Demo group ${Date.now() % 1000}` });
+    track("create_group");
     setName("");
     await refresh?.();
     if (convo?.id) setActive(convo.id);
@@ -47,6 +49,7 @@ export default function Chat() {
     const contact = contacts.find((c: any) => c.connectedUser?.id === dmTarget);
     const handle = "@" + (contact?.connectedUser?.username || dmTarget.slice(0, 8));
     const convo = await createDirect({ userId: dmTarget });
+    track("create_dm");
     setDmTarget("");
     await refresh?.();
     if (convo?.id) {
@@ -142,12 +145,17 @@ function Conversation({
     if (newest?.id) mark?.({ messageId: newest.id });
   }, [messages?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // One /conversation page view per opened thread (the provider is keyed by id, so this remounts
+  // on every switch).
+  useEffect(() => { trackPageView(PATHS.conversation); }, []);
+
   const submit = async () => {
     if (!text.trim() && files.length === 0) return;
     const t = text.trim(); const f = files;
     setText(""); setFiles([]);
     // useSendMessage switches to a multipart upload when `files` is present; file-only is allowed.
     await send({ ...(t ? { content: t } : {}), ...(f.length ? { files: f } : {}) });
+    track("send_message", { convo: convo?.type === "direct" ? "dm" : (convo?.type ?? "group"), hasFiles: f.length > 0 });
   };
 
   return (

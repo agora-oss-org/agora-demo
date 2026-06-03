@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCreateEntity } from "@agora-sdk/react-js";
+import { track } from "./analytics";
 
 // Standalone "create an entity" form, routed to from the Feed (and from inside a space).
 // Uses useCreateEntity (→ POST /v7/:project/entities), which takes an optional `spaceId` so the
@@ -35,6 +36,7 @@ export default function CreateEntity({
         spaceId,
         ...(images.length ? { images: { files: images } } : {}),
       });
+      track("create_entity", { hasImage: images.length > 0, inSpace: !!spaceId });
       onDone();
     } catch (e: any) {
       setError(e?.message || "Failed to create entity");

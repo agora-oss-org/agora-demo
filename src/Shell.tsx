@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
 import Login from "./Login";
 import useTokenRefresh from "./useTokenRefresh";
+import { track, trackPageView, PATHS } from "./analytics";
 import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
@@ -12,6 +13,17 @@ import Notifications from "./Notifications";
 import Profile from "./Profile";
 
 type Tab = "feed" | "spaces" | "search" | "chat" | "connections" | "notifications" | "profile";
+// Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
+// report). Two ids don't match their path: notifications→/inbox, profile→/me.
+const TAB_TO_PATH: Record<Tab, string> = {
+  feed: PATHS.feed,
+  spaces: PATHS.spaces,
+  search: PATHS.search,
+  chat: PATHS.chat,
+  connections: PATHS.connections,
+  notifications: PATHS.inbox,
+  profile: PATHS.me,
+};
 const TABS: { id: Tab; label: string }[] = [
   { id: "feed", label: "📰 Feed" },
   { id: "spaces", label: "🏘️ Spaces" },
@@ -69,6 +81,13 @@ export default function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Per-tab page view. Fires once authed (the pre-auth `/` landing pageview from auto-track covers
+  // the login screen) and on every tab switch; suppressed while a deep link is showing a detail
+  // (EntityView records its own /entity view in that case).
+  useEffect(() => {
+    if (accessToken && !deepLink) trackPageView(TAB_TO_PATH[tab]);
+  }, [tab, accessToken, deepLink]);
+
   if (!initialized) return <div className="center muted">Loading session…</div>;
   if (!accessToken) return <div className="center"><Login /></div>;
 
@@ -95,7 +114,7 @@ export default function Shell() {
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
           </button>
-          <button onClick={() => signOutAll()}>Sign out</button>
+          <button onClick={() => { track("logout"); signOutAll(); }}>Sign out</button>
           {ADMIN_URL && isOperatorToken(accessToken) && (
             <button onClick={() => window.open(ADMIN_URL, "_blank", "noopener,noreferrer")} title="Open the admin app in a new tab">
               🛠️ Admin

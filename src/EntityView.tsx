@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { track, trackPageView, PATHS } from "./analytics";
 import {
   EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -84,6 +85,7 @@ function ReportButton({
     setBusy(true); setErr(null);
     try {
       await createReport({ targetId, reason, details: details.trim() || undefined });
+      track("submit_report", { reason, target: targetType });
       setDone(true); setOpen(false);
       setReason("spam"); setDetails("");
     } catch (e: any) {
@@ -153,6 +155,9 @@ export default function EntityView({
   // the published @agora-sdk types still lag the local fork that adds `include` to EntityProvider
   // (see docs/CR-2026-05-31-entityprovider-include.md). The fork supplies the runtime via the vite
   // alias; drop the cast once the package is republished with the include support and reinstalled.
+  // One /entity page view per detail open — covers every entry point (feed, search, space, deep
+  // link), since they all render this component.
+  useEffect(() => { trackPageView(PATHS.entity); }, []);
   const providerProps = { entityId, include: ["user"] } as any;
   return (
     <EntityProvider {...providerProps}>
@@ -176,6 +181,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
     setDeleting(true);
     try {
       await deleteEntity();
+      track("delete_entity");
       onBack();
     } catch (e: any) {
       alert(e?.response?.data?.error || "Couldn’t delete this post.");
@@ -238,7 +244,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
           <EntityEditor
             entity={entity}
             onCancel={() => setEditing(false)}
-            onSave={async (update) => { await updateEntity({ update }); setEditing(false); }}
+            onSave={async (update) => { await updateEntity({ update }); track("edit_entity"); setEditing(false); }}
           />
         ) : (
           <>
@@ -424,7 +430,9 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
   // surface it instead of letting the optimistic toggle silently desync.
   const react = async (reactionType: string) => {
     setErr(null);
-    try { await toggleReaction({ reactionType }); }
+    // Toggling the reaction you already hold clears it; otherwise it's an add (or a switch).
+    const action = currentReaction === reactionType ? "remove_reaction" : "add_reaction";
+    try { await toggleReaction({ reactionType }); track(action, { type: reactionType, target: "entity" }); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn't save your reaction."); }
   };
   return (
@@ -481,7 +489,7 @@ function CommentRow({
   const save = async () => {
     if (!draft.trim()) return;
     setBusy(true); setErr(null);
-    try { await onUpdate({ commentId: comment.id, content: draft.trim() }); setEditing(false); }
+    try { await onUpdate({ commentId: comment.id, content: draft.trim() }); track("edit_comment"); setEditing(false); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn’t save your edit."); }
     finally { setBusy(false); }
   };
@@ -490,8 +498,15 @@ function CommentRow({
     setBusy(true); setErr(null);
     // On success the SDK marks it deleted in place (Reddit-style) and the row re-renders as the
     // tombstone below; only reset busy on error.
-    try { await onDelete({ commentId: comment.id }); }
+    try { await onDelete({ commentId: comment.id }); track("delete_comment"); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn’t delete your comment."); setBusy(false); }
+  };
+  // Same add-vs-remove derivation as entity reactions; the hook owns the optimistic UI so we just
+  // record the outcome (swallow errors as before).
+  const reactComment = async (reactionType: string) => {
+    const action = currentReaction === reactionType ? "remove_reaction" : "add_reaction";
+    try { await toggleReaction({ reactionType }); track(action, { type: reactionType, target: "comment" }); }
+    catch { /* optimistic toggle reverts itself */ }
   };
 
   // A soft-deleted comment is kept in the tree but blanked — show a tombstone instead of empty
@@ -534,7 +549,7 @@ function CommentRow({
         <button
           className={currentReaction === "upvote" ? "primary" : ""}
           disabled={loading || !isReal}
-          onClick={() => toggleReaction({ reactionType: "upvote" })}
+          onClick={() => reactComment("upvote")}
           style={{ padding: "2px 8px", fontSize: 12 }}
         >
           ⬆ {reactionCounts?.upvote ?? 0}
@@ -542,7 +557,7 @@ function CommentRow({
         <button
           className={currentReaction === "downvote" ? "primary" : ""}
           disabled={loading || !isReal}
-          onClick={() => toggleReaction({ reactionType: "downvote" })}
+          onClick={() => reactComment("downvote")}
           style={{ padding: "2px 8px", fontSize: 12 }}
         >
           ⬇ {reactionCounts?.downvote ?? 0}
@@ -579,7 +594,7 @@ function Comments({ entityId, highlightCommentId }: { entityId: string; highligh
     setErr(null);
     // The server requires read access to comment (assertCanReadEntity); show its rejection rather
     // than dropping the comment silently.
-    try { await createComment({ content: text }); setText(""); }
+    try { await createComment({ content: text }); track("post_comment"); setText(""); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn't post your comment — you may not have access."); }
     finally { setBusy(false); }
   };

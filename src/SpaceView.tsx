@@ -8,6 +8,7 @@ import {
 } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
 import CreateEntity from "./CreateEntity";
+import { track, trackPageView, PATHS } from "./analytics";
 
 // A single space: shows its subspaces (with a create-subspace form) and its entries (with the
 // standalone create-entity form). Recurses into subspaces via a nested <SpaceView>, so you can
@@ -74,11 +75,15 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [space.id]);
 
+  // One /space page view per space opened (keyed on id so drilling into a subspace re-records).
+  useEffect(() => { trackPageView(PATHS.space); }, [space.id]);
+
   const createSubspace = async () => {
     if (!name.trim()) return;
     setBusy(true);
     try {
       await subs.createSpace({ name, parentSpaceId: space.id, ...(priv ? { readingPermission: "members", requireJoinApproval: true } : {}) });
+      track("create_space", { parent: "subspace", private: priv });
       setName("");
       setPriv(false);
       refreshSubs();
@@ -117,18 +122,18 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
           {isOwner && <span className="muted">you own this</span>}
           {!isOwner && isActiveMember && <span className="muted">member</span>}
           {!isOwner && !isActiveMember && !isPending && (
-            <button className="primary" disabled={busy} onClick={async () => { setBusy(true); try { await joinSpace({ spaceId: space.id }); await refreshMembership(); } finally { setBusy(false); } }}>
+            <button className="primary" disabled={busy} onClick={async () => { setBusy(true); try { await joinSpace({ spaceId: space.id }); track("join_space", { private: isPrivate }); await refreshMembership(); } finally { setBusy(false); } }}>
               {isPrivate ? "Request to join" : "Join"}
             </button>
           )}
           {isPending && (
             <>
               <span className="muted">request pending</span>
-              <button disabled={busy} onClick={async () => { await leaveSpace({ spaceId: space.id }); refreshMembership(); }}>Cancel</button>
+              <button disabled={busy} onClick={async () => { await leaveSpace({ spaceId: space.id }); track("leave_space", { pending: true }); refreshMembership(); }}>Cancel</button>
             </>
           )}
           {!isOwner && isActiveMember && (
-            <button disabled={busy} onClick={async () => { await leaveSpace({ spaceId: space.id }); refreshMembership(); }}>Leave</button>
+            <button disabled={busy} onClick={async () => { await leaveSpace({ spaceId: space.id }); track("leave_space", { pending: false }); refreshMembership(); }}>Leave</button>
           )}
         </div>
       </div>
@@ -274,6 +279,7 @@ function SpaceThread({
     if (!t) return;
     setText("");
     await send({ content: t });
+    track("send_message", { convo: "space", hasFiles: false });
   };
 
   return (

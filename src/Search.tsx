@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchContent } from "@agora-sdk/react-js";
 import EntityView from "./EntityView";
+import { track } from "./analytics";
 
 // Semantic search via the SDK's useSearchContent → POST /v7/:project/search/content (Voyage + pgvector).
 // Entity results are clickable: opening one renders EntityView in place, and its "← back" returns
@@ -9,6 +10,19 @@ export default function Search() {
   const { results, loading, error, search } = useSearchContent() as any;
   const [q, setQ] = useState("japanese noodle soup");
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Track submit_search with the RESULT COUNT (never the query text). The count isn't known until
+  // the request settles, so a ref marks "a user search is in flight" and we record it when loading
+  // falls back to false.
+  const searchedRef = useRef(false);
+  const runSearch = () => { searchedRef.current = true; search({ query: q, sourceTypes: ["entity"], limit: 10 }); };
+  useEffect(() => {
+    if (!loading && searchedRef.current) {
+      searchedRef.current = false;
+      track("submit_search", { results: results?.length ?? 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   if (selected) return <EntityView entityId={selected} onBack={() => setSelected(null)} backLabel="← back to results" />;
 
@@ -19,9 +33,9 @@ export default function Search() {
           placeholder="semantic query…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search({ query: q, sourceTypes: ["entity"], limit: 10 })}
+          onKeyDown={(e) => e.key === "Enter" && runSearch()}
         />
-        <button className="primary" onClick={() => search({ query: q, sourceTypes: ["entity"], limit: 10 })}>Search</button>
+        <button className="primary" onClick={runSearch}>Search</button>
       </div>
       {error && <div className="error">{error}</div>}
       <div className="muted">{loading ? "Searching…" : `${results?.length ?? 0} results (by semantic similarity)`}</div>

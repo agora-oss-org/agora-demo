@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useUser, useCheckUsernameAvailability } from "@agora-sdk/react-js";
+import { track } from "./analytics";
 
 // Edit the current user's profile via useUser().updateUser → PATCH /users/:id (self-only on the
 // server). Exercises the user-update SDK surface. The header shows @username, falling back to name,
@@ -61,6 +62,13 @@ export default function Profile() {
         name: name.trim() || null,
         bio: bio.trim(),
         avatar: avatar.trim() || null,
+      });
+      // Which fields actually changed (booleans only — never the values themselves).
+      track("update_profile", {
+        changedUsername: (username.trim() || null) !== (user?.username ?? null),
+        changedName: (name.trim() || null) !== (user?.name ?? null),
+        changedBio: bio.trim() !== (user?.bio ?? ""),
+        changedAvatar: (avatar.trim() || null) !== (user?.avatar ?? null),
       });
       setMsg("✓ saved");
       if (username.trim()) setAvail({ kind: "current" }); // it's now ours

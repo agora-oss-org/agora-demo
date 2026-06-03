@@ -4,6 +4,7 @@ import {
   useAcceptConnection, useDeclineConnection, useRequestConnection, useRemoveConnection,
   useFetchUserByUsername, useSearchUsers, useUser,
 } from "@agora-sdk/react-js";
+import { track } from "./analytics";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -79,6 +80,7 @@ export default function Connections() {
         targetId = u.id;
       }
       await request({ userId: targetId, message: "Hi from the Agora demo!" });
+      track("request_connection");
       setUserId(""); setSelectedId(null); setShowResults(false); userSearch.reset?.();
       setMsg("✓ request sent"); refresh();
     } catch (e: any) { setMsg(e?.response?.data?.error || e?.message); }
@@ -132,8 +134,8 @@ export default function Connections() {
           <div key={p.id} className="card row">
             <span>@{p.user?.username || p.user?.id?.slice(0, 8)} wants to connect{p.message ? `: "${p.message}"` : ""}</span>
             <span className="spacer" />
-            <button className="primary" onClick={async () => { await accept({ connectionId: p.id }); refresh(); }}>Accept</button>
-            <button onClick={async () => { await decline({ connectionId: p.id }); refresh(); }}>Decline</button>
+            <button className="primary" onClick={async () => { await accept({ connectionId: p.id }); track("accept_connection"); refresh(); }}>Accept</button>
+            <button onClick={async () => { await decline({ connectionId: p.id }); track("decline_connection"); refresh(); }}>Decline</button>
           </div>
         ))}
         {pending.length === 0 && <div className="muted">none</div>}
@@ -145,7 +147,7 @@ export default function Connections() {
           <div key={p.id} className="card row">
             <span>→ @{p.user?.username || p.user?.id?.slice(0, 8)}{p.message ? `: "${p.message}"` : ""}</span>
             <span className="spacer" />
-            <button onClick={async () => { await remove({ connectionId: p.id }); refresh(); }}>Cancel</button>
+            <button onClick={async () => { await remove({ connectionId: p.id }); track("cancel_request"); refresh(); }}>Cancel</button>
           </div>
         ))}
         {sent.length === 0 && <div className="muted">none</div>}

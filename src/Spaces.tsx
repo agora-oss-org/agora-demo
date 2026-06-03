@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSpaceList } from "@agora-sdk/react-js";
 import SpaceView from "./SpaceView";
+import { track } from "./analytics";
 
 // Browses top-level spaces (→ GET /v7/:project/spaces with no parent = top-level) and creates them.
 // Entering a space hands off to <SpaceView>, which shows its subspaces + entries and lets you nest.
@@ -25,6 +26,7 @@ export default function Spaces() {
     try {
       // Private = members-only reading + join requires admin approval. Public = anyone reads/joins.
       await createSpace({ name, ...(priv ? { readingPermission: "members", requireJoinApproval: true } : {}) });
+      track("create_space", { parent: "root", private: priv });
       setName("");
       setPriv(false);
       refresh();

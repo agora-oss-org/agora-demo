@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, AuthorTag } from "./EntityView";
 import CreateEntity from "./CreateEntity";
+import { track } from "./analytics";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
 // ranking algorithm per request (hot/decay/gravity/…).
@@ -37,7 +38,7 @@ export default function Feed() {
       <div className="row">
         <strong>Feed</strong>
         <label className="muted">sort</label>
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ width: "auto" }}>
+        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); track("change_feed_sort", { sort: e.target.value }); }} style={{ width: "auto" }}>
           {SORTS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="spacer" />

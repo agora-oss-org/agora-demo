@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth, useOAuthSignIn } from "@agora-sdk/react-js";
+import { track } from "./analytics";
 
 // Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens),
 // plus GitHub OAuth via useOAuthSignIn (→ /oauth/authorize → Supabase-brokered → /oauth/callback,
@@ -21,12 +22,14 @@ export default function Login() {
     try {
       if (mode === "in") {
         await signInWithEmailAndPassword({ email, password });
+        track("login", { method: "password" });
       } else {
         const res = await signUpWithEmailAndPassword({ email, password });
         // With email confirmation enabled the user is created but NOT signed in yet — they must
         // click the link in their inbox, then sign in. (status === "signed_in" means auto-confirm
         // is on and they're already in, so we just fall through and the auth gate renders the app.)
         if (res?.status === "confirmation_required") setPendingEmail(res.email);
+        else track("login", { method: "signup" });
       }
     } catch (e: any) {
       setErr(e?.response?.data?.error || e?.message || "Authentication failed");
