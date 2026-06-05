@@ -147,11 +147,13 @@ export default function EntityView({
   onBack,
   backLabel = "← back",
   highlightCommentId,
+  highlightEntity,
 }: {
   entityId: string;
   onBack: () => void;
   backLabel?: string;
   highlightCommentId?: string;
+  highlightEntity?: boolean;
 }) {
   // include:["user"] loads the entity author so the detail title shows who posted it. Cast to any:
   // the published @agora-sdk types still lag the local fork that adds `include` to EntityProvider
@@ -163,12 +165,12 @@ export default function EntityView({
   const providerProps = { entityId, include: ["user"] } as any;
   return (
     <EntityProvider {...providerProps}>
-      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} />
+      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} highlightEntity={highlightEntity} />
     </EntityProvider>
   );
 }
 
-function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string }) {
+function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntity }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string; highlightEntity?: boolean }) {
   const { entity, updateEntity, deleteEntity } = useEntity() as any;
   const { user } = useUser() as any;
   const [editing, setEditing] = useState(false);
@@ -180,6 +182,15 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
   // by bumping its key — same keyed-remount pattern used for ConversationProvider / ProfileViewer).
   const [commentsKey, setCommentsKey] = useState(0);
   const scheduleModerationRefresh = useModerationRefresh();
+
+  // Entity-level notifications (upvote/reaction/mention on the post itself) deep-link here with
+  // highlightEntity set: scroll the post into view and flash it (the comment case is handled by
+  // CommentRow's own highlight). Fire once the entity has loaded.
+  const entityRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (highlightEntity && entity) entityRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightEntity, entity?.id]);
 
   // Owner deletes their own post (→ DELETE /entities/:id via useEntity().deleteEntity). Confirm
   // first (irreversible), then leave the now-gone entity via onBack. The server still authorizes,
@@ -247,7 +258,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
           )}
         </div>
       )}
-      <div className={"panel col" + (removed ? " redacted" : "")}>
+      <div ref={entityRef} className={"panel col" + (removed ? " redacted" : "") + (highlightEntity ? " highlight" : "")}>
         {editing ? (
           <EntityEditor
             entity={entity}

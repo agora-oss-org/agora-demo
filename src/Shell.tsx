@@ -36,11 +36,19 @@ const TABS: { id: Tab; label: string }[] = [
 // Optional link to the separate admin app (opens in a new tab). Hidden when VITE_ADMIN_URL is unset.
 const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
 
-// Deep-link target captured from the URL query on load. The admin app links moderators straight to
-// the reported content via  ?entity=<id>[&comment=<id>]  — we open that entity (over the tabs) and,
-// for a comment report, scroll to/highlight the comment. Read once on mount; we then strip the
-// params from the URL so a refresh doesn't re-trigger and the bar stays clean.
-type DeepLink = { entityId: string; commentId?: string };
+// Deep-link target: open one entity full-bleed over the tabs, optionally scrolling to/highlighting a
+// comment (or the entity itself). Two producers feed it:
+//   1. the URL query on load — the admin app links moderators straight to reported content via
+//      ?entity=<id>[&comment=<id>]; read once on mount, then stripped from the URL (below).
+//   2. the Notifications tab — clicking a notification opens its entity/comment and remembers the
+//      inbox as the back-target (backTab/backLabel), so "back" returns there instead of the feed.
+type DeepLink = {
+  entityId: string;
+  commentId?: string;
+  highlightEntity?: boolean;
+  backTab?: Tab;
+  backLabel?: string;
+};
 function readDeepLink(): DeepLink | null {
   const params = new URLSearchParams(window.location.search);
   const entityId = params.get("entity");
@@ -97,8 +105,9 @@ export default function Shell() {
       <EntityView
         entityId={deepLink.entityId}
         highlightCommentId={deepLink.commentId}
-        onBack={() => { setDeepLink(null); setTab("feed"); }}
-        backLabel="← back to demo"
+        highlightEntity={deepLink.highlightEntity}
+        onBack={() => { setDeepLink(null); setTab(deepLink.backTab ?? "feed"); }}
+        backLabel={deepLink.backLabel ?? "← back to demo"}
       />
     </div>
   ) : (
@@ -130,7 +139,19 @@ export default function Shell() {
       {tab === "spaces" && <Spaces />}
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
-      {tab === "notifications" && <Notifications />}
+      {tab === "notifications" && (
+        <Notifications
+          onOpen={(entityId, commentId) =>
+            setDeepLink({
+              entityId,
+              commentId,
+              highlightEntity: !commentId, // entity-level notification → flash the entity itself
+              backTab: "notifications",
+              backLabel: "← back to notifications",
+            })
+          }
+        />
+      )}
       {tab === "profile" && <Me />}
     </div>
   );

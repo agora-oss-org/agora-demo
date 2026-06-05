@@ -66,8 +66,9 @@ a { color: var(--accent); }
 .spacer { flex: 1; }
 .msg { padding: 6px 10px; border-radius: 8px; background: #161320; margin-bottom: 6px; }
 .msg.mine { background: #2a2140; }
-/* Deep-linked (admin "view in demo") comment: accent ring + brief glow so it stands out on arrival. */
-.msg.highlight { border: 1px solid var(--accent); box-shadow: 0 0 0 2px rgba(217, 111, 176, 0.35); animation: msg-flash 1.6s ease-out; }
+/* Deep-linked (admin "view in demo" / notification) target: accent ring + brief glow so the comment
+   — or, for an entity-level notification, the post panel itself — stands out on arrival. */
+.msg.highlight, .panel.highlight { border: 1px solid var(--accent); box-shadow: 0 0 0 2px rgba(217, 111, 176, 0.35); animation: msg-flash 1.6s ease-out; }
 @keyframes msg-flash { 0% { box-shadow: 0 0 0 3px rgba(217, 111, 176, 0.7); } 100% { box-shadow: 0 0 0 2px rgba(217, 111, 176, 0.2); } }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: #4ade80; } .dot.off { background: #f87171; }
