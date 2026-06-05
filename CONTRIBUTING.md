@@ -24,7 +24,7 @@ for the full local stack; the short version:
 ```bash
 cd ../agora-server/apps/api && npm run dev               # 1. boot the Agora server
 cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # 2. seed a confirmed demo user (once)
-npm install && npm run dev                               # 3. run this demo → http://localhost:5174
+npm install && npm run dev                               # 3. run this demo → http://localhost:5175
 ```
 
 Point `VITE_API_BASE_URL` in `.env` at your server. Login is prefilled from `.env`.

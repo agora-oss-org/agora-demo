@@ -9,19 +9,18 @@ import Feed from "./Feed";
 import Search from "./Search";
 import Chat from "./Chat";
 import Spaces from "./Spaces";
-import Connections from "./Connections";
 import Notifications from "./Notifications";
-import Profile from "./Profile";
+import Me from "./Me";
 
-type Tab = "feed" | "spaces" | "search" | "chat" | "connections" | "notifications" | "profile";
+type Tab = "feed" | "spaces" | "search" | "chat" | "notifications" | "profile";
 // Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
-// report). Two ids don't match their path: notifications→/inbox, profile→/me.
+// report). Two ids don't match their path: notifications→/inbox, profile→/me. Connections is no
+// longer a top-level tab — it lives under Me (records /connections from there).
 const TAB_TO_PATH: Record<Tab, string> = {
   feed: PATHS.feed,
   spaces: PATHS.spaces,
   search: PATHS.search,
   chat: PATHS.chat,
-  connections: PATHS.connections,
   notifications: PATHS.inbox,
   profile: PATHS.me,
 };
@@ -30,7 +29,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "spaces", label: "🏘️ Spaces" },
   { id: "search", label: "🔍 Search" },
   { id: "chat", label: "💬 Chat" },
-  { id: "connections", label: "🤝 Connections" },
   { id: "notifications", label: "🔔 Inbox" },
   { id: "profile", label: "👤 Me" },
 ];
@@ -132,9 +130,8 @@ export default function Shell() {
       {tab === "spaces" && <Spaces />}
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
-      {tab === "connections" && <Connections />}
       {tab === "notifications" && <Notifications />}
-      {tab === "profile" && <Profile />}
+      {tab === "profile" && <Me />}
     </div>
   );
 

@@ -27,6 +27,6 @@ RUN npm ci
 # App source (node_modules, dist, .env, etc. excluded via .dockerignore).
 COPY . .
 
-# vite.config.ts sets host:true + strictPort on 5174, so the dev server binds 0.0.0.0:5174.
-EXPOSE 5174
+# vite.config.ts sets host:true + strictPort on 5175, so the dev server binds 0.0.0.0:5175.
+EXPOSE 5175
 CMD ["npm", "run", "dev"]

@@ -41,7 +41,7 @@ cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # agora-demo@gm
 
 # 3. Run the demo
 npm install
-npm run dev                                             # http://localhost:5174
+npm run dev                                             # http://localhost:5175
 ```
 
 Login is prefilled from `.env`. Scripts: `npm run dev` (dev server), `npm run build` (`tsc -b`
@@ -62,10 +62,10 @@ verification is manual; `tsc -b` in the build is the only static check.
 ## Docker
 
 The SDK comes from npm, so the build context is self-contained (no sibling dir). The image runs the
-Vite dev server (HMR) on port 5174.
+Vite dev server (HMR) on port 5175.
 
 ```bash
-docker compose up --build                   # http://localhost:5174
+docker compose up --build                   # http://localhost:5175
 
 # point at an Agora server on your host instead of the deployed default:
 VITE_API_BASE_URL=http://host.docker.internal:4000/v7 docker compose up --build
@@ -75,7 +75,7 @@ Or with plain Docker:
 
 ```bash
 docker build -t agora-demo:dev .
-docker run --rm -p 5174:5174 -e VITE_API_BASE_URL=https://agora.recoverysky.net/v7 agora-demo:dev
+docker run --rm -p 5175:5175 -e VITE_API_BASE_URL=https://agora.recoverysky.net/v7 agora-demo:dev
 ```
 
 `VITE_*` are baked into the image from build args (`Dockerfile`) and overridable per run via `-e` /
@@ -89,8 +89,8 @@ CI (`.github/workflows/docker-publish.yml`) builds `linux/amd64,linux/arm64` and
 push to `root` (tagged `latest` + commit SHA) and on `v*` tags (semver) to both registries:
 
 ```bash
-docker run --rm -p 5174:5174 ghcr.io/jenova-marie/agora-demo:latest
-docker run --rm -p 5174:5174 agoraserver/agora-demo:latest
+docker run --rm -p 5175:5175 ghcr.io/jenova-marie/agora-demo:latest
+docker run --rm -p 5175:5175 agoraserver/agora-demo:latest
 ```
 
 The baked `VITE_*` come from the repo's **`production` GitHub Environment** — variables
