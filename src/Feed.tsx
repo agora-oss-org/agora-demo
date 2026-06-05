@@ -3,6 +3,7 @@ import { useEntityList } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, AuthorTag } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 import { track } from "./analytics";
+import { useModerationRefresh } from "./useModerationRefresh";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
 // ranking algorithm per request (hot/decay/gravity/…).
@@ -14,6 +15,7 @@ export default function Feed() {
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [sortBy, setSortBy] = useState("hot");
+  const scheduleModerationRefresh = useModerationRefresh();
 
   // include: ["user"] so each card can show its author (the 3rd fetchEntities arg is the config).
   const refresh = (sort = sortBy) => fetchEntities({}, { sortBy: sort }, { limit: 20, include: ["user"] });
@@ -29,7 +31,7 @@ export default function Feed() {
     return (
       <CreateEntity
         onCancel={() => setCreating(false)}
-        onDone={() => { setCreating(false); refresh(); }}
+        onDone={() => { setCreating(false); refresh(); scheduleModerationRefresh(() => refresh()); }}
       />
     );
 

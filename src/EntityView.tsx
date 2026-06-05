@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { track, trackPageView, PATHS } from "./analytics";
 import { useProfileViewer } from "./ProfileViewerContext";
+import { useModerationRefresh } from "./useModerationRefresh";
 import {
   EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
@@ -174,6 +175,12 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
   const [deleting, setDeleting] = useState(false);
   const isOwner = !!(entity && user && entity.userId === user.id);
 
+  // Force a fresh server pull of the comment section ~5s after a comment is posted, so async
+  // moderation/censorship is reflected (useCommentSectionData exposes no refetch, so we remount it
+  // by bumping its key — same keyed-remount pattern used for ConversationProvider / ProfileViewer).
+  const [commentsKey, setCommentsKey] = useState(0);
+  const scheduleModerationRefresh = useModerationRefresh();
+
   // Owner deletes their own post (→ DELETE /entities/:id via useEntity().deleteEntity). Confirm
   // first (irreversible), then leave the now-gone entity via onBack. The server still authorizes,
   // so a rejection (e.g. access changed) surfaces instead of silently failing.
@@ -271,7 +278,14 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId }: { entityId: 
           </>
         )}
       </div>
-      {entity && <Comments entityId={entityId} highlightCommentId={highlightCommentId} />}
+      {entity && (
+        <Comments
+          key={commentsKey}
+          entityId={entityId}
+          highlightCommentId={highlightCommentId}
+          onPosted={() => scheduleModerationRefresh(() => setCommentsKey((k) => k + 1))}
+        />
+      )}
     </div>
   );
 }
@@ -591,7 +605,7 @@ function CommentRow({
   );
 }
 
-function Comments({ entityId, highlightCommentId }: { entityId: string; highlightCommentId?: string }) {
+function Comments({ entityId, highlightCommentId, onPosted }: { entityId: string; highlightCommentId?: string; onPosted?: () => void }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
   const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore } = cs;
   const { user } = useUser() as any;
@@ -605,7 +619,7 @@ function Comments({ entityId, highlightCommentId }: { entityId: string; highligh
     setErr(null);
     // The server requires read access to comment (assertCanReadEntity); show its rejection rather
     // than dropping the comment silently.
-    try { await createComment({ content: text }); track("post_comment"); setText(""); }
+    try { await createComment({ content: text }); track("post_comment"); setText(""); onPosted?.(); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn't post your comment — you may not have access."); }
     finally { setBusy(false); }
   };
