@@ -35,6 +35,9 @@ const TABS: { id: Tab; label: string }[] = [
 
 // Optional link to the separate admin app (opens in a new tab). Hidden when VITE_ADMIN_URL is unset.
 const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
+// App version (package.json), inlined by vite.config.ts → shown in the header so a deploy's build is
+// identifiable at a glance.
+const APP_VERSION = import.meta.env.VITE_APP_VERSION;
 
 // Deep-link target: open one entity full-bleed over the tabs, optionally scrolling to/highlighting a
 // comment (or the entity itself). Two producers feed it:
@@ -113,7 +116,7 @@ export default function Shell() {
   ) : (
     <div className="app">
       <div className="header">
-        <div className="brand">🏛️ Agora <small>demo · @agora SDK → your Agora server</small></div>
+        <div className="brand">🏛️ Agora <small>demo{APP_VERSION ? ` v${APP_VERSION}` : ""} · @agora SDK → your Agora server</small></div>
         <div className="row">
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}

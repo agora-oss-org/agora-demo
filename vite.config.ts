@@ -1,7 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+
+// Surface the app version (package.json) to the client via import.meta.env.VITE_APP_VERSION — the
+// header renders it. Set on process.env so Vite inlines it like the other VITE_* (same mechanism the
+// env.vite load below relies on); this keeps the rest of package.json out of the bundle. Reads at
+// dev-server/build start, so the COPYd package.json is present in Docker/CI too.
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf8"));
+process.env.VITE_APP_VERSION = pkg.version;
 
 // Client env: load the VITE_* vars from env.vite (instead of the default .env, which holds only the
 // un-prefixed secret key and must never reach the bundle). Vite exposes process.env VITE_* to

@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_PROJECT_ID: string;
   readonly VITE_DEMO_EMAIL: string;
   readonly VITE_DEMO_PASSWORD: string;
+  readonly VITE_APP_VERSION: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;
