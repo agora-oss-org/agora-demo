@@ -40,6 +40,31 @@ const sdkAlias: Record<string, string> = useLocalSdk
   ? { "@agora-sdk/core": forkCore, "@agora-sdk/react-js": forkReactJs }
   : {};
 
+// Secure-chat SDK (agora-sdk-plus) local-fork override — same on-disk-guarded mechanism as the
+// @agora-sdk core block above. When the sibling agora-sdk-plus workspace is present AND built
+// (dist/esm exists) we alias the package names at its dist so local SDK edits take effect without
+// republishing; OFF automatically when the sibling isn't present (Docker/CI build context is the demo
+// dir only → falls back to the npm-installed packages). Alias resolution doesn't follow a linked
+// package's own deps, so we must alias all three packages PLUS react-js's internal crypto subpaths
+// (crypto/ts-mls resolves to a dir/index.js; crypto/testing resolves to a flat testing.js).
+const plusRoot = (p: string) =>
+  fileURLToPath(new URL(`../agora-sdk-plus/packages/secure-chat/${p}`, import.meta.url));
+const secureCoreEsm = plusRoot("core/dist/esm/index.js");
+const useLocalSecure = existsSync(secureCoreEsm);
+if (useLocalSecure) {
+  // eslint-disable-next-line no-console
+  console.log("[vite] @agora-sdk/secure-chat-* → LOCAL workspace (dist/esm). Rebuild the fork after edits.");
+}
+const secureAlias: Record<string, string> = useLocalSecure
+  ? {
+      "@agora-sdk/secure-chat-core": secureCoreEsm,
+      "@agora-sdk/secure-chat-react-js": plusRoot("react-js/dist/esm/index.js"),
+      "@agora-sdk/secure-chat-crypto/ts-mls": plusRoot("crypto/dist/esm/ts-mls/index.js"),
+      "@agora-sdk/secure-chat-crypto/testing": plusRoot("crypto/dist/esm/testing.js"),
+      "@agora-sdk/secure-chat-crypto": plusRoot("crypto/dist/esm/index.js"),
+    }
+  : {};
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -61,7 +86,7 @@ export default defineConfig({
     allowedHosts: [".intra.recoverysky.net"],
   },
   resolve: {
-    alias: sdkAlias,
+    alias: { ...sdkAlias, ...secureAlias },
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
   },
   optimizeDeps: {
@@ -74,6 +99,11 @@ export default defineConfig({
       "@reduxjs/toolkit",
       "axios",
       "socket.io-client",
+    ],
+    exclude: [
+      "@agora-sdk/secure-chat-core",
+      "@agora-sdk/secure-chat-react-js",
+      "@agora-sdk/secure-chat-crypto",
     ],
   },
 });

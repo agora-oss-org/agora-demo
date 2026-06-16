@@ -1,5 +1,6 @@
 import { ReplykeProvider, ChatProvider } from "@agora-sdk/react-js";
 import Shell from "./Shell";
+import SecureChatGate from "./secure/SecureChatGate";
 
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID;
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -11,7 +12,9 @@ export default function App() {
   return (
     <ReplykeProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL}>
       <ChatProvider>
-        <Shell />
+        <SecureChatGate>
+          <Shell />
+        </SecureChatGate>
       </ChatProvider>
     </ReplykeProvider>
   );

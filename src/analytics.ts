@@ -50,6 +50,7 @@ export const PATHS = {
   spaces: "/spaces",
   search: "/search",
   chat: "/chat",
+  secure: "/secure",
   connections: "/connections",
   follows: "/follows",
   inbox: "/inbox",
