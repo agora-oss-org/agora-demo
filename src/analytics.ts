@@ -38,6 +38,8 @@ export type AnalyticsEvent =
   | "send_message" | "create_dm" | "create_group"
   // connections
   | "request_connection" | "accept_connection" | "decline_connection" | "cancel_request"
+  // follows (one-way)
+  | "follow_user" | "unfollow_user"
   // profile / discovery
   | "update_profile" | "submit_search" | "change_feed_sort";
 
@@ -49,6 +51,7 @@ export const PATHS = {
   search: "/search",
   chat: "/chat",
   connections: "/connections",
+  follows: "/follows",
   inbox: "/inbox",
   me: "/me",
   entity: "/entity",

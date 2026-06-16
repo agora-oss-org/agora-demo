@@ -2,14 +2,16 @@ import { useState } from "react";
 import { trackPageView, PATHS } from "./analytics";
 import Profile from "./Profile";
 import Connections from "./Connections";
+import Follows from "./Follows";
 
 // The "Me" tab: the current user's own area. Profile editing is the landing sub-view; Connections
 // (friend requests) is folded in here as a sub-category rather than its own top-level tab. No router,
 // so it's a local sub-tab switch — mirrors how Shell swaps top-level tabs.
-type Sub = "profile" | "connections";
+type Sub = "profile" | "connections" | "follows";
 const SUBS: { id: Sub; label: string }[] = [
   { id: "profile", label: "✏️ Profile" },
   { id: "connections", label: "🤝 Connections" },
+  { id: "follows", label: "❤️ Follows" },
 ];
 
 export default function Me() {
@@ -20,7 +22,7 @@ export default function Me() {
   const select = (next: Sub) => {
     if (next === sub) return;
     setSub(next);
-    trackPageView(next === "connections" ? PATHS.connections : PATHS.me);
+    trackPageView(next === "connections" ? PATHS.connections : next === "follows" ? PATHS.follows : PATHS.me);
   };
 
   return (
@@ -35,6 +37,7 @@ export default function Me() {
 
       {sub === "profile" && <Profile />}
       {sub === "connections" && <Connections />}
+      {sub === "follows" && <Follows />}
     </div>
   );
 }

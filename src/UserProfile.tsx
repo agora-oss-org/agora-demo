@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useFetchUser, useEntityList } from "@agora-sdk/react-js";
+import { useFetchUser, useEntityList, useFollowManager, useRequestConnection } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
-import { trackPageView, PATHS } from "./analytics";
+import { track, trackPageView, PATHS } from "./analytics";
 
 // Public, read-only view of any user — opened from a clicked author name (AuthorTag → the
 // ProfileViewer overlay). useFetchUser({ userId }) returns the public-safe User (no email/secure
@@ -17,10 +17,32 @@ export default function UserProfile({
 }) {
   const fetchUser = useFetchUser() as any;
   const posts = useEntityList({ listId: `user-posts-${userId}` }) as any;
+  // Relationship actions on the viewed user: one-way follow (status-aware toggle) + a connection
+  // (friend) request reusing the same hook Connections.tsx fires. Keyed by userId; the overlay
+  // remounts UserProfile per profile, so useFollowManager re-fetches status for each.
+  const follow = useFollowManager({ userId }) as any;
+  const requestConnection = useRequestConnection() as any;
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
+  // null = idle, "sent" = connection request fired this session, any other string = error to show.
+  const [connectState, setConnectState] = useState<null | "sent" | string>(null);
+
+  const onToggleFollow = async () => {
+    const wasFollowing = !!follow.isFollowing;
+    try {
+      await follow.toggleFollow();
+      track(wasFollowing ? "unfollow_user" : "follow_user");
+    } catch { /* loose demo style: leave the toggle as-is on failure */ }
+  };
+  const onConnect = async () => {
+    try {
+      await requestConnection({ userId, message: "Hi from the Agora demo!" });
+      track("request_connection");
+      setConnectState("sent");
+    } catch (e: any) { setConnectState(e?.response?.data?.error || e?.message || "Couldn't send request"); }
+  };
 
   // /user page view (no-router SPA → recorded explicitly), once per profile opened.
   useEffect(() => { trackPageView(PATHS.user); }, [userId]);
@@ -84,6 +106,19 @@ export default function UserProfile({
               </div>
             </div>
           </div>
+
+          {!isMe && (
+            <div className="row" style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+              <button className={follow.isFollowing ? "" : "primary"} disabled={follow.isLoading} onClick={onToggleFollow}>
+                {follow.isFollowing ? "✓ Following" : "➕ Follow"}
+              </button>
+              <button disabled={connectState === "sent"} onClick={onConnect}>
+                {connectState === "sent" ? "✓ Request sent" : "🤝 Connect"}
+              </button>
+            </div>
+          )}
+          {typeof connectState === "string" && connectState !== "sent" && <div className="muted">{connectState}</div>}
+
           {user.bio && <div className="prewrap">{user.bio}</div>}
 
           <div className="row" style={{ marginTop: 6 }}><strong>Recent posts</strong></div>

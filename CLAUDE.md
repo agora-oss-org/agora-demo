@@ -92,17 +92,32 @@ connection) → `Shell.tsx`.
 
 `Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
 authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
-(Feed, Spaces, Search, Chat, Connections, Inbox, Me). There is no router library — tabs, and
-drill-downs within a tab (entity detail, space detail, create forms), are all conditional renders
-swapped via local state.
+(Feed, Spaces, Search, Chat, Inbox, Me). There is no router library — tabs, and drill-downs within a
+tab (entity detail, space detail, create forms), are all conditional renders swapped via local state.
+**Connections is no longer a top-level tab** — it lives, with Follows and Profile, as a sub-tab under
+**Me** (`Me.tsx`). Shell also owns three cross-cutting concerns:
+
+- **Deep links.** A `?entity=<id>[&comment=<id>]` URL (the admin app links moderators straight to
+  reported content) is captured synchronously on mount, then stripped from the URL; the Notifications
+  tab feeds the same `DeepLink` state on click. A deep link renders one `EntityView` full-bleed over
+  the tabs, with a back-target that remembers where you came from.
+- **Profile overlay.** Everything is wrapped in `ProfileViewerProvider` so any `AuthorTag` anywhere
+  can call `openProfile(userId)` — see the overlay convention below.
+- **Session.** `useTokenRefresh()` proactively rotates the access token before its TTL; sign-out uses
+  `useSignOutAll().signOutAll` (clears **all** persisted accounts), **not** `useAuth().signOut()`
+  (which switches to a remaining account instead of ending the session). OAuth round-trips return
+  tokens in the URL fragment, handled once via `handleOAuthCallback()`.
 
 Each feature file maps to one SDK surface (and the server route it hits, noted in each file's
 header comment):
 
 | File | SDK hook(s) / provider | Exercises |
 |------|------------------------|-----------|
-| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`, `signUpWithEmailAndPassword`) | `/auth`; handles the email-confirmation sign-up flow |
-| `Profile.tsx` | `useUser().updateUser` | edit own username/name/bio/avatar (PATCH `/users/:id`) |
+| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`, `signUpWithEmailAndPassword`), `useOAuthSignIn` | `/auth`; handles the email-confirmation sign-up flow + OAuth |
+| `Me.tsx` | — (sub-tab host) | the current user's area: switches between `Profile` / `Connections` / `Follows` sub-views |
+| `Profile.tsx` | `useUser().updateUser` | edit own username/name/bio/avatar (PATCH `/users/:id`) — landing sub-view of Me |
+| `Follows.tsx` | `useFetchFollowing`, `useFetchFollowers`, `useUnfollowByFollowId` | one-way follows (no accept step); distinct from Connections — Me sub-view |
+| `UserProfile.tsx` / `ProfileViewer.tsx` / `ProfileViewerContext.ts` | `useFetchUser`, `useEntityList`, `useFollowManager`, `useRequestConnection` | read-only public profile of any user, shown in an app-wide portal overlay opened by `AuthorTag` |
 | `Feed.tsx` | `useEntityList` | list entities; routes to `CreateEntity` / `EntityView` |
 | `CreateEntity.tsx` | `useCreateEntity` | create an entity, optional `spaceId` + multipart image upload |
 | `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
@@ -125,7 +140,22 @@ header comment):
 - Images: uploaded entity files render via the exported `fileImageSrc(file)` helper in
   `EntityView.tsx` (picks medium → original variant). Reuse it for any new image display.
 - Connections aren't realtime (the socket layer is chat-only), so `Connections.tsx` polls on an
-  interval to surface accepted/incoming requests.
+  interval to surface accepted/incoming requests. `Follows.tsx` polls the same way for the same
+  reason. **Follows ≠ Connections**: follows are one-way and need no accept step (`useFollowManager`
+  toggle / `useUnfollowByFollowId`); connections are bidirectional friend requests with
+  request→accept (`useRequestConnection`/`useAcceptConnection`).
+- The public-profile overlay is opened via `useProfileViewer().openProfile(userId)` from any
+  `AuthorTag`. `ProfileViewerContext.ts` is a deliberately tiny leaf module (default no-op
+  `openProfile`) so `AuthorTag` can import it without creating the cycle
+  provider → `UserProfile` → `EntityView` → context. The overlay is a `createPortal` on top of the
+  app (so closing preserves feed/thread scroll), keyed by `userId` so author→author navigation
+  remounts cleanly.
+- Server moderation is **asynchronous** — a create can be accepted now and hidden ~seconds later.
+  After a successful create, call the `schedule(refresh)` from `useModerationRefresh()` to re-pull the
+  list once (~5s out) so the censored state surfaces. Rapid posts collapse to one refresh; pending
+  timers clear on unmount.
+- Token rotation is handled centrally by `useTokenRefresh()` in `Shell` (proactive, scheduled before
+  `exp`); the SDK's reactive 401-interceptor is the backstop. Don't add per-feature refresh logic.
 - Styling is one hand-written `styles.css` with utility-ish classes (`col`, `row`, `panel`, `card`,
   `pill`, `msg`, `mine`, `muted`, `spacer`, `prewrap`, `clamp3`, `linklike`). No CSS framework.
 - Analytics is Umami, centralized in `src/analytics.ts` — call `track(event, data?)` /
