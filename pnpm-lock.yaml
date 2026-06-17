@@ -15,11 +15,11 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@agora-sdk/secure-chat-core':
-        specifier: ^0.6.3
-        version: 0.6.3(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)
+        specifier: ^0.6.5
+        version: 0.6.5(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)
       '@agora-sdk/secure-chat-react-js':
-        specifier: ^0.6.3
-        version: 0.6.3(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^0.6.5
+        version: 0.6.5(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@reduxjs/toolkit':
         specifier: ^2.12.0
         version: 2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
@@ -82,17 +82,17 @@ packages:
       react-dom: ^18.0.0 || ^19.0.0
       react-redux: ^9.0.0
 
-  '@agora-sdk/secure-chat-core@0.6.3':
-    resolution: {integrity: sha512-dQpJeFGVRAGJpDoA9TOaYMjD0aJkNMCP0D4oknFw0DhEkGq8V7jAODBcRVxH3N2CtbPs539H5h0IkcTfazCz4A==}
+  '@agora-sdk/secure-chat-core@0.6.5':
+    resolution: {integrity: sha512-yWczZkzK+UZTzKgR6644GGARcWbmi/hbMdfEwHzLoHQinqH2lgd1rT//C0LvcnQT0bRNE6arsfSko4Jm2+qEXg==}
     peerDependencies:
       '@agora-sdk/core': ^1.2.2
       react: ^18.0.0 || ^19.0.0
 
-  '@agora-sdk/secure-chat-crypto@0.6.3':
-    resolution: {integrity: sha512-0Dzn/fyfV62y9G8hEh6Rx80CSqUJlhSYOkkWlGmuHfpNDV3Uj3/3/IR270RA40IT58a0x9JOTc3TbFr3VbDu7A==}
+  '@agora-sdk/secure-chat-crypto@0.6.5':
+    resolution: {integrity: sha512-AsdVR5vIlnyjo4PC5L/UcvjN2Xk9eZvMFl2p843tmo7oYYgbePRDk9dptf8qnGBz/TQBzpsaolSRZmwRQ8fSgQ==}
 
-  '@agora-sdk/secure-chat-react-js@0.6.3':
-    resolution: {integrity: sha512-b8oxSmQAK2Qt8DTI5O3tJ197dxhcKAKZ00de/TVOzW5B1Si3vkaMQ6QVM3DUM24i+M3X6B4vYHdEqTIZv1apdQ==}
+  '@agora-sdk/secure-chat-react-js@0.6.5':
+    resolution: {integrity: sha512-vPp2BZ5PwFbaY0IGMuxp8IfJeFOQQU6YuvSsPJPFsukQ97X+edCp4tbee2qGbstGjDN+dmif7FRj+w4klFiTSg==}
     peerDependencies:
       '@agora-sdk/core': ^1.2.2
       react: ^18.0.0 || ^19.0.0
@@ -981,10 +981,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@agora-sdk/secure-chat-core@0.6.3(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)':
+  '@agora-sdk/secure-chat-core@0.6.5(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@agora-sdk/core': 1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
-      '@agora-sdk/secure-chat-crypto': 0.6.3
+      '@agora-sdk/secure-chat-crypto': 0.6.5
       '@agora-server/contract': 0.9.3
       axios: 1.18.0
       react: 18.3.1
@@ -1000,7 +1000,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@agora-sdk/secure-chat-crypto@0.6.3':
+  '@agora-sdk/secure-chat-crypto@0.6.5':
     dependencies:
       '@noble/ciphers': 2.1.1
       '@noble/curves': 2.0.1
@@ -1013,11 +1013,11 @@ snapshots:
       - '@hpke/ml-kem'
       - '@noble/post-quantum'
 
-  '@agora-sdk/secure-chat-react-js@0.6.3(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@agora-sdk/secure-chat-react-js@0.6.5(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@agora-sdk/core': 1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
-      '@agora-sdk/secure-chat-core': 0.6.3(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)
-      '@agora-sdk/secure-chat-crypto': 0.6.3
+      '@agora-sdk/secure-chat-core': 0.6.5(@agora-sdk/core@1.2.2(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react@18.3.1)
+      '@agora-sdk/secure-chat-crypto': 0.6.5
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     transitivePeerDependencies:
