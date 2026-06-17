@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
+import * as secureChatCore from "@agora-sdk/secure-chat-core";
 import Login from "./Login";
 import useTokenRefresh from "./useTokenRefresh";
 import { track, trackPageView, PATHS } from "./analytics";
@@ -41,6 +42,11 @@ const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
 // App version (package.json), inlined by vite.config.ts → shown in the header so a deploy's build is
 // identifiable at a glance.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION;
+// Installed @agora-sdk/secure-chat-core version, read from the SDK's runtime `VERSION` export so it
+// reflects the code actually running (the aliased local fork or the npm package). Accessed loosely —
+// the published npm types don't include it yet (only the local fork does), so it's omitted from the
+// header until the export ships on npm; switch to a typed `import { VERSION }` once it does.
+const SECURE_CHAT_VERSION = (secureChatCore as any).VERSION as string | undefined;
 
 // Deep-link target: open one entity full-bleed over the tabs, optionally scrolling to/highlighting a
 // comment (or the entity itself). Two producers feed it:
@@ -119,7 +125,7 @@ export default function Shell() {
   ) : (
     <div className="app">
       <div className="header">
-        <div className="brand">🏛️ Agora <small>demo{APP_VERSION ? ` v${APP_VERSION}` : ""} · @agora SDK → your Agora server</small></div>
+        <div className="brand">🏛️ Agora <small>demo{APP_VERSION ? ` v${APP_VERSION}` : ""}{SECURE_CHAT_VERSION ? ` · secure-chat v${SECURE_CHAT_VERSION}` : ""} · @agora SDK → your Agora server</small></div>
         <div className="row">
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
