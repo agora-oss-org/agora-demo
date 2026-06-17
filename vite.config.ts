@@ -4,19 +4,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // Surface the app version (package.json) to the client via import.meta.env.VITE_APP_VERSION — the
-// header renders it. Set on process.env so Vite inlines it like the other VITE_* (same mechanism the
-// env.vite load below relies on); this keeps the rest of package.json out of the bundle. Reads at
-// dev-server/build start, so the COPYd package.json is present in Docker/CI too.
+// header renders it. Set on process.env so Vite inlines it alongside the VITE_* vars it reads from
+// .env; this keeps the rest of package.json out of the bundle. Reads at dev-server/build start, so
+// the COPYd package.json is present in Docker/CI too.
 const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("./package.json", import.meta.url)), "utf8"));
 process.env.VITE_APP_VERSION = pkg.version;
 
-// Client env: load the VITE_* vars from env.vite (instead of the default .env, which holds only the
-// un-prefixed secret key and must never reach the bundle). Vite exposes process.env VITE_* to
-// import.meta.env, so populating process.env here points the client build at env.vite. Guarded by an
-// on-disk check so Docker/CI — where VITE_* arrive straight from the environment and env.vite is
-// absent — keep working. Native to Node ≥20.12, so no dotenv dependency.
-const envViteFile = fileURLToPath(new URL("./env.vite", import.meta.url));
-if (existsSync(envViteFile)) (process as { loadEnvFile(path: string): void }).loadEnvFile(envViteFile);
+// Client env comes from .env, read NATIVELY by Vite — no hand-loading. Vite exposes only VITE_-prefixed
+// vars to the bundle, so a true secret like AGORA_UMAMI_API_KEY (un-prefixed) stays server-side. Reading
+// .env natively (rather than manually loading a separate env.vite once at boot) is what lets Vite
+// auto-restart the dev server when .env changes — so an edited VITE_API_BASE_URL can't silently go stale
+// in a long-running process. In Docker/CI the VITE_* vars arrive straight from the container
+// environment, which Vite also exposes.
 
 // SDK source resolution:
 // - By default the SDK is the published npm packages @agora-sdk/core + @agora-sdk/react-js (real
