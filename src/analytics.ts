@@ -36,6 +36,8 @@ export type AnalyticsEvent =
   | "create_space" | "join_space" | "leave_space"
   // chat
   | "send_message" | "create_dm" | "create_group"
+  // secure chat — at-rest encryption (EncryptedStore)
+  | "secure_unlock" | "secure_lock" | "secure_change_password"
   // connections
   | "request_connection" | "accept_connection" | "decline_connection" | "cancel_request"
   // follows (one-way)
