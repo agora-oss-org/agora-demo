@@ -24,6 +24,9 @@ export default function SecureChatGate({ children }: { children: React.ReactNode
   // Don't mount the secure stack until signed in (no token = nothing to register/drain).
   if (!accessToken) return <>{children}</>;
 
+  // Strip /v7 from baseUrl to get origin for secure-socket connection (SecureChatProvider appends /secure-socket/).
+  const socketOrigin = new URL(API_BASE_URL).origin;
+
   return (
     <SecureChatProvider
       crypto={crypto}
@@ -31,7 +34,7 @@ export default function SecureChatGate({ children }: { children: React.ReactNode
       projectId={PROJECT_ID}
       accessToken={accessToken}
       baseUrl={API_BASE_URL}
-      socketUrl={API_BASE_URL}
+      socketUrl={socketOrigin}
       padding="ladder"
     >
       <SecureBootstrap />
