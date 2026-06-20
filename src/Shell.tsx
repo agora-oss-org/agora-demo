@@ -9,6 +9,8 @@ import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
 import SecureChat from "./secure/SecureChat";
+import SecureUnlock from "./secure/SecureUnlock";
+import { useSecureStore, RETURN_TO_SECURE_TAB_KEY } from "./secure/SecureStoreContext";
 import Spaces from "./Spaces";
 import Notifications from "./Notifications";
 import Me from "./Me";
@@ -29,7 +31,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "feed", label: "📰 Feed" },
   { id: "spaces", label: "🏘️ Spaces" },
   { id: "search", label: "🔍 Search" },
-  { id: "secure", label: "🔒 Chat" },
+  { id: "secure", label: "🔒 Secure Chat" },
   { id: "notifications", label: "🔔 Inbox" },
   { id: "profile", label: "👤 Me" },
 ];
@@ -83,7 +85,23 @@ export default function Shell() {
   // when more than one account is stored, so it can't reliably end the session (and won't clear a
   // corrupted/duplicate accounts map). signOutAll wipes the whole map and returns us to Login.
   const { signOutAll } = useSignOutAll() as any;
-  const [tab, setTab] = useState<Tab>("feed");
+  // Secure chat encrypts its IndexedDB at rest, so its provider is mounted only once unlocked. Until
+  // then the Chat tab shows the unlock prompt instead of SecureChat (whose hooks need the provider).
+  const { unlocked } = useSecureStore();
+  // Default to Feed, EXCEPT right after a secure-chat unlock: unlocking remounts this Shell (the
+  // provider mounts above it), so the gate leaves a one-shot flag telling us to reopen the Secure
+  // Chat tab the user just came from instead of bouncing to Feed. Read-and-clear so it fires once.
+  const [tab, setTab] = useState<Tab>(() => {
+    try {
+      if (sessionStorage.getItem(RETURN_TO_SECURE_TAB_KEY)) {
+        sessionStorage.removeItem(RETURN_TO_SECURE_TAB_KEY);
+        return "secure";
+      }
+    } catch {
+      /* sessionStorage unavailable — fall through to Feed */
+    }
+    return "feed";
+  });
   // Capture any ?entity=…&comment=… deep link once, synchronously, before the effect strips it from
   // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
   const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());
@@ -147,7 +165,7 @@ export default function Shell() {
       {tab === "feed" && <Feed />}
       {tab === "spaces" && <Spaces />}
       {tab === "search" && <Search />}
-      {tab === "secure" && <SecureChat />}
+      {tab === "secure" && (unlocked ? <SecureChat /> : <SecureUnlock />)}
       {tab === "notifications" && (
         <Notifications
           onOpen={(entityId, commentId) =>
