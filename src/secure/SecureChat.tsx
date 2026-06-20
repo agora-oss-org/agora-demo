@@ -6,7 +6,8 @@ import SecureThread from "./SecureThread";
 import BackupPanel from "./BackupPanel";
 import DevicePanel from "./DevicePanel";
 
-// Mirrors Chat.tsx's connection-picker, but createDirectConversation runs the MLS handshake under the
+// The app's only chat surface (the old non-encrypted DM/group Chat.tsx was removed). A
+// connection-picker starts DMs, but createDirectConversation runs the MLS handshake under the
 // hood (claim a KeyPackage per peer device → build the group locally → relay targeted Welcomes); the
 // group secrets never leave the client. The list comes from the blind server; titles fall back to ids
 // (the demo doesn't resolve secure rosters to handles).

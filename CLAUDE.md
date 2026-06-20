@@ -88,11 +88,15 @@ The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parse
 ## Architecture
 
 `main.tsx` → `App.tsx` (`ReplykeProvider` projectId+baseUrl, then `ChatProvider` for the socket.io
-connection) → `Shell.tsx`.
+connection — still used by **space chat** in `SpaceView.tsx` — then `SecureChatGate` for the E2EE
+secure-chat stack) → `Shell.tsx`.
 
 `Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
 authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
-(Feed, Spaces, Search, Chat, Inbox, Me). There is no router library — tabs, and drill-downs within a
+(Feed, Spaces, Search, Chat, Inbox, Me). The **Chat** tab (🔒) is the E2EE **secure chat** —
+`SecureChat` under `src/secure/`; the old non-encrypted socket.io chat surface has been removed as a
+top-level tab (that stack now survives only as space-scoped chat inside `SpaceView.tsx`). There is no
+router library — tabs, and drill-downs within a
 tab (entity detail, space detail, create forms), are all conditional renders swapped via local state.
 **Connections is no longer a top-level tab** — it lives, with Follows and Profile, as a sub-tab under
 **Me** (`Me.tsx`). Shell also owns three cross-cutting concerns:
@@ -121,9 +125,9 @@ header comment):
 | `Feed.tsx` | `useEntityList` | list entities; routes to `CreateEntity` / `EntityView` |
 | `CreateEntity.tsx` | `useCreateEntity` | create an entity, optional `spaceId` + multipart image upload |
 | `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
-| `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList` | top-level spaces, then recurse into subspaces + space-scoped entries |
+| `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList`; `useFetchSpaceConversation`, `ConversationProvider` + `useConversationContext` | top-level spaces, then recurse into subspaces + space-scoped entries; **space chat** is the realtime socket.io chat surface (the old DM/group `Chat.tsx` was removed, so this is its last consumer) |
 | `Search.tsx` | `useSearchContent` | semantic search (POST `/search/content`); entity hits open in `EntityView` |
-| `Chat.tsx` | `useConversations`, `ConversationProvider` + `useConversationContext`, `useChatContext`, `useCreateDirectConversation`, `useConversationMembers` | realtime socket.io chat: groups + DMs |
+| `secure/SecureChat.tsx` (+ `SecureChatGate`, `SecureBootstrap`, `SecureThread`, `DevicePanel`, `BackupPanel`, `SafetyNumberModal`) | `@agora-sdk/secure-chat-react-js`: `useSecureConversations`, `useSecureMessages`, `useSecureDevice`, `useSecureHandshakes`, `useSecureBackup`, `useSecureSafetyNumber` | the **Chat** tab: E2EE (MLS) secure DMs — device bootstrap/handshake drain, per-conversation decrypt, key backup + safety-number verification |
 | `Connections.tsx` | `useFetchConnections`/`…SentPending…`/`…ReceivedPending…`, `useRequestConnection`, `useAcceptConnection`, `useSearchUsers` | connections: typeahead request, sent/received pending, accept/decline/cancel |
 | `Notifications.tsx` | `useAppNotifications` | in-app inbox |
 
@@ -134,9 +138,11 @@ header comment):
 - Comment-section rendering merges `newComments` (optimistic, just-posted) **on top of** `comments`
   (server) until a refetch folds them together — see the comment in `EntityView.tsx`. Mirror this
   pattern for any other optimistic list.
-- Chat messages come newest-first from the SDK; `Conversation` reverses them for display and
-  compares `m.userId === user?.id` to style "mine". The open thread is wrapped in
-  `ConversationProvider` (keyed by id so switching re-joins the socket room).
+- Space-chat messages (`SpaceView.tsx`) come newest-first from the SDK; the thread reverses them for
+  display and compares `m.userId === user?.id` to style "mine". The open thread is wrapped in
+  `ConversationProvider` (keyed by id so switching re-joins the socket room). Secure chat
+  (`secure/SecureThread.tsx`) mirrors this but decides "mine" via `senderUserId === myUserId` and
+  fails decryption **closed**.
 - Images: uploaded entity files render via the exported `fileImageSrc(file)` helper in
   `EntityView.tsx` (picks medium → original variant). Reuse it for any new image display.
 - Connections aren't realtime (the socket layer is chat-only), so `Connections.tsx` polls on an
