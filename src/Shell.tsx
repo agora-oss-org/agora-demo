@@ -10,7 +10,7 @@ import Feed from "./Feed";
 import Search from "./Search";
 import SecureChat from "./secure/SecureChat";
 import SecureUnlock from "./secure/SecureUnlock";
-import { useSecureStore, RETURN_TO_SECURE_TAB_KEY } from "./secure/SecureStoreContext";
+import { useSecureStore } from "./secure/SecureStoreContext";
 import Spaces from "./Spaces";
 import Notifications from "./Notifications";
 import Me from "./Me";
@@ -87,21 +87,11 @@ export default function Shell() {
   const { signOutAll } = useSignOutAll() as any;
   // Secure chat encrypts its IndexedDB at rest, so its provider is mounted only once unlocked. Until
   // then the Chat tab shows the unlock prompt instead of SecureChat (whose hooks need the provider).
+  // While locked, the Secure Chat tab shows the unlock prompt; once unlocked it swaps to SecureChat in
+  // place (the provider is already mounted above the Shell, so unlocking never remounts this — you stay
+  // on whatever tab you're on).
   const { unlocked } = useSecureStore();
-  // Default to Feed, EXCEPT right after a secure-chat unlock: unlocking remounts this Shell (the
-  // provider mounts above it), so the gate leaves a one-shot flag telling us to reopen the Secure
-  // Chat tab the user just came from instead of bouncing to Feed. Read-and-clear so it fires once.
-  const [tab, setTab] = useState<Tab>(() => {
-    try {
-      if (sessionStorage.getItem(RETURN_TO_SECURE_TAB_KEY)) {
-        sessionStorage.removeItem(RETURN_TO_SECURE_TAB_KEY);
-        return "secure";
-      }
-    } catch {
-      /* sessionStorage unavailable — fall through to Feed */
-    }
-    return "feed";
-  });
+  const [tab, setTab] = useState<Tab>("feed");
   // Capture any ?entity=…&comment=… deep link once, synchronously, before the effect strips it from
   // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
   const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());

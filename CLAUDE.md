@@ -144,15 +144,19 @@ header comment):
   (`secure/SecureThread.tsx`) mirrors this but decides "mine" via `senderUserId === myUserId` and
   fails decryption **closed**.
 - Secure chat is **encrypted at rest**: `SecureChatGate` wraps the IndexedDB store in
-  `createEncryptedStore(...)`, which is **locked** until the user enters a password. The provider must
-  be unlocked **before** it mounts (a locked store throws `StoreLockedError` on every op), so the gate
-  mounts `SecureChatProvider` only once `unlocked` and the **Chat tab shows `SecureUnlock` until then**
-  (other tabs are unaffected — lazy gate). Unlock/lock/changePassword are exposed via the
-  `SecureStoreContext` leaf (default no-ops, like `ProfileViewerContext`). Lock-on-logout is automatic
-  (an `accessToken` effect in the gate). `lock()` is a **disk-lock**, not a memory purge — the manual
-  "Lock store" button reloads to actually clear cached plaintext. The old passphrase→server backup/
-  restore UI was removed (deprecated; cross-device recovery is moving to device-to-device), so an
-  evicted/fresh browser auto-registers a new identity.
+  `createEncryptedStore(...)`, which is **locked** until the user enters a password. A locked store
+  throws `StoreLockedError` on every op, so nothing may read it before unlock — but that's the store
+  *consumers*, not `SecureChatProvider` itself (it only builds rest/socket/repo and never touches the
+  store at mount; the socket dials lazily). So the gate mounts the provider as soon as you're **signed
+  in** (even while locked) and gates only the consumers: `SecureBootstrap` (register/drain) and the
+  **Secure Chat tab** (which shows `SecureUnlock` until `unlocked`). Because the provider is already the
+  Shell's ancestor, unlocking just flips a boolean **in place — no remount, no tab bounce** (other tabs
+  are unaffected — lazy gate). Unlock/lock/changePassword are exposed via the `SecureStoreContext` leaf
+  (default no-ops, like `ProfileViewerContext`). Lock-on-logout is automatic (an `accessToken` effect in
+  the gate). `lock()` is a **disk-lock**, not a memory purge — the manual "Lock store" button reloads to
+  actually clear cached plaintext. The old passphrase→server backup/restore UI was removed (deprecated;
+  cross-device recovery is moving to device-to-device), so an evicted/fresh browser auto-registers a new
+  identity.
 - Images: uploaded entity files render via the exported `fileImageSrc(file)` helper in
   `EntityView.tsx` (picks medium → original variant). Reuse it for any new image display.
 - Connections aren't realtime (the socket layer is chat-only), so `Connections.tsx` polls on an

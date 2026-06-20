@@ -7,7 +7,7 @@ import {
 } from "@agora-sdk/secure-chat-react-js";
 import * as secureReactJs from "@agora-sdk/secure-chat-react-js";
 import SecureBootstrap from "./SecureBootstrap";
-import { SecureStoreContext, RETURN_TO_SECURE_TAB_KEY, type SecureStoreApi } from "./SecureStoreContext";
+import { SecureStoreContext, type SecureStoreApi } from "./SecureStoreContext";
 import { track } from "../analytics";
 
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID;
@@ -24,13 +24,21 @@ const createEncryptedStore = (secureReactJs as any).createEncryptedStore as (bas
 // App.tsx parses) so the /secure REST + socket always have a URL even if the singletons aren't set yet.
 // crypto + store are built ONCE (stable identity) so the MLS state and IndexedDB handle survive
 // re-renders. The store is wrapped in createEncryptedStore so everything persisted to IndexedDB is
-// sealed at rest (AES-256-GCM under an argon2id-derived key) — but that makes it LOCKED until the user
-// unlocks with a password. The provider MUST be unlocked before it mounts (a locked store throws
-// StoreLockedError on every op, so SecureBootstrap's register()/drain would fail), so we gate it:
-// mount the secure stack only once `unlocked`, and surface unlock/lock/changePassword via context so
-// the Chat tab (SecureUnlock / SecureStorePanel) can drive it. SecureBootstrap stays mounted inside the
-// provider so Welcomes/messages drain app-wide once unlocked. The access token is re-passed every
-// render and read lazily per request, so token refresh just works.
+// sealed at rest (AES-256-GCM under an argon2id-derived key) — LOCKED until the user unlocks with a
+// password. A locked store throws StoreLockedError on every op, so nothing may touch it before unlock.
+//
+// Crucially, that "nothing" is the store *consumers* — NOT the provider itself: SecureChatProvider
+// only builds the rest/socket/repo and registers a disconnect-on-unmount cleanup; it performs no store
+// I/O and the socket doesn't auto-connect (it dials lazily when a hook joins). So we mount the provider
+// as soon as we're signed in — even while locked — and instead gate the things that actually read the
+// store: SecureBootstrap (register/drain) here, and the SecureChat tab in Shell. This keeps the Shell
+// mounted across unlock (the provider is already its ancestor), so entering the password just flips a
+// boolean — no remount, no flash, no tab bounce. unlock/lock/changePassword are surfaced via context
+// for the Chat tab (SecureUnlock / SecureStorePanel). The access token is re-passed every render and
+// read lazily per request, so token refresh just works.
+//
+// NB: this relies on the provider staying store-inert at mount. If a future SDK version makes it read
+// the store eagerly (e.g. an at-mount device load), revert to gating the whole provider on `unlocked`.
 export default function SecureChatGate({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth() as any;
   const crypto = useMemo(() => createWebSecureChatCrypto(), []);
@@ -52,13 +60,7 @@ export default function SecureChatGate({ children }: { children: React.ReactNode
       unlock: async (password: string) => {
         await store.unlock(password); // first run mints the key; later runs unwrap it (or throw)
         track("secure_unlock");
-        // Remember to land on the Secure Chat tab after the unlock remounts the Shell (below).
-        try {
-          sessionStorage.setItem(RETURN_TO_SECURE_TAB_KEY, "1");
-        } catch {
-          /* sessionStorage unavailable (private mode quirks) — just bounce to Feed, harmless */
-        }
-        setUnlocked(true);
+        setUnlocked(true); // flips SecureBootstrap + the SecureChat tab on, in place — no remount
       },
       // Disk-lock + full reload: lock() only re-seals the on-disk data; the reload is what actually
       // purges plaintext already cached in provider/crypto memory for this session.
@@ -78,7 +80,7 @@ export default function SecureChatGate({ children }: { children: React.ReactNode
 
   return (
     <SecureStoreContext.Provider value={api}>
-      {accessToken && unlocked ? (
+      {accessToken ? (
         <SecureChatProvider
           crypto={crypto}
           store={store}
@@ -88,7 +90,8 @@ export default function SecureChatGate({ children }: { children: React.ReactNode
           socketUrl={socketOrigin}
           padding="ladder"
         >
-          <SecureBootstrap />
+          {/* Store consumer — only mount once unlocked so it never hits a locked store. */}
+          {unlocked && <SecureBootstrap />}
           {children}
         </SecureChatProvider>
       ) : (
