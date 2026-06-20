@@ -3,7 +3,7 @@ import { useFetchConnections, useUser } from "@agora-sdk/react-js";
 import { useSecureConversations } from "@agora-sdk/secure-chat-react-js";
 import { track } from "../analytics";
 import SecureThread from "./SecureThread";
-import BackupPanel from "./BackupPanel";
+import SecureStorePanel from "./SecureStorePanel";
 import DevicePanel from "./DevicePanel";
 
 // The app's only chat surface (the old non-encrypted DM/group Chat.tsx was removed). A
@@ -44,7 +44,7 @@ export default function SecureChat() {
   return (
     <div className="col" style={{ gap: 12 }}>
       <div className="row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <BackupPanel />
+        <SecureStorePanel />
         <DevicePanel />
       </div>
       <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
