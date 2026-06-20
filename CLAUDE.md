@@ -93,7 +93,7 @@ secure-chat stack) → `Shell.tsx`.
 
 `Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
 authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
-(Feed, Spaces, Search, Chat, Inbox, Me). The **Chat** tab (🔒) is the E2EE **secure chat** —
+(Feed, Spaces, Search, Secure Chat, Inbox, Me). The **🔒 Secure Chat** tab is the E2EE **secure chat** —
 `SecureChat` under `src/secure/`; the old non-encrypted socket.io chat surface has been removed as a
 top-level tab (that stack now survives only as space-scoped chat inside `SpaceView.tsx`). There is no
 router library — tabs, and drill-downs within a
@@ -127,7 +127,7 @@ header comment):
 | `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
 | `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList`; `useFetchSpaceConversation`, `ConversationProvider` + `useConversationContext` | top-level spaces, then recurse into subspaces + space-scoped entries; **space chat** is the realtime socket.io chat surface (the old DM/group `Chat.tsx` was removed, so this is its last consumer) |
 | `Search.tsx` | `useSearchContent` | semantic search (POST `/search/content`); entity hits open in `EntityView` |
-| `secure/SecureChat.tsx` (+ `SecureChatGate`, `SecureBootstrap`, `SecureThread`, `DevicePanel`, `BackupPanel`, `SafetyNumberModal`) | `@agora-sdk/secure-chat-react-js`: `useSecureConversations`, `useSecureMessages`, `useSecureDevice`, `useSecureHandshakes`, `useSecureBackup`, `useSecureSafetyNumber` | the **Chat** tab: E2EE (MLS) secure DMs — device bootstrap/handshake drain, per-conversation decrypt, key backup + safety-number verification |
+| `secure/SecureChat.tsx` (+ `SecureChatGate`, `SecureStoreContext`, `SecureUnlock`, `SecureStorePanel`, `SecureBootstrap`, `SecureThread`, `DevicePanel`, `SafetyNumberModal`) | `@agora-sdk/secure-chat-react-js`: `useSecureConversations`, `useSecureMessages`, `useSecureDevice`, `useSecureHandshakes`, `useSecureSafetyNumber`; `createEncryptedStore` | the **🔒 Secure Chat** tab: E2EE (MLS) secure DMs — device bootstrap/handshake drain, per-conversation decrypt, safety-number verification, **at-rest encryption** (password-gated `EncryptedStore`) |
 | `Connections.tsx` | `useFetchConnections`/`…SentPending…`/`…ReceivedPending…`, `useRequestConnection`, `useAcceptConnection`, `useSearchUsers` | connections: typeahead request, sent/received pending, accept/decline/cancel |
 | `Notifications.tsx` | `useAppNotifications` | in-app inbox |
 
@@ -143,6 +143,16 @@ header comment):
   `ConversationProvider` (keyed by id so switching re-joins the socket room). Secure chat
   (`secure/SecureThread.tsx`) mirrors this but decides "mine" via `senderUserId === myUserId` and
   fails decryption **closed**.
+- Secure chat is **encrypted at rest**: `SecureChatGate` wraps the IndexedDB store in
+  `createEncryptedStore(...)`, which is **locked** until the user enters a password. The provider must
+  be unlocked **before** it mounts (a locked store throws `StoreLockedError` on every op), so the gate
+  mounts `SecureChatProvider` only once `unlocked` and the **Chat tab shows `SecureUnlock` until then**
+  (other tabs are unaffected — lazy gate). Unlock/lock/changePassword are exposed via the
+  `SecureStoreContext` leaf (default no-ops, like `ProfileViewerContext`). Lock-on-logout is automatic
+  (an `accessToken` effect in the gate). `lock()` is a **disk-lock**, not a memory purge — the manual
+  "Lock store" button reloads to actually clear cached plaintext. The old passphrase→server backup/
+  restore UI was removed (deprecated; cross-device recovery is moving to device-to-device), so an
+  evicted/fresh browser auto-registers a new identity.
 - Images: uploaded entity files render via the exported `fileImageSrc(file)` helper in
   `EntityView.tsx` (picks medium → original variant). Reuse it for any new image display.
 - Connections aren't realtime (the socket layer is chat-only), so `Connections.tsx` polls on an
