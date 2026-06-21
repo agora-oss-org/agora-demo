@@ -44,7 +44,10 @@ export default function SecureThread({
           const mine = !!(m.model.senderUserId && myUserId && m.model.senderUserId === myUserId);
           return (
             <div key={m.model.id} className={"msg" + (mine ? " mine" : "")}>
-              {m.status === "ok" && <div className="prewrap">{m.plaintext}</div>}
+              {m.status === "ok" &&
+                (m.content?.deleted
+                  ? <div className="muted">🗑️ message deleted</div>
+                  : <div className="prewrap">{m.content?.body}</div>)}
               {m.status === "pending" && <div className="muted">⏳ waiting for key update…</div>}
               {m.status === "rejected" && (
                 <div className="error">⚠️ couldn't be verified{m.rejectedReason ? ` (${m.rejectedReason})` : ""}</div>

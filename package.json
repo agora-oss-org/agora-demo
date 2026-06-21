@@ -14,7 +14,7 @@
   "dependencies": {
     "@agora-sdk/core": "^1.2.2",
     "@agora-sdk/react-js": "^1.2.2",
-    "@agora-sdk/secure-chat-core": "^0.6.5",
+    "@agora-sdk/secure-chat-core": "^0.8.0",
     "@agora-sdk/secure-chat-react-js": "^0.6.5",
     "@reduxjs/toolkit": "^2.12.0",
     "axios": "^1.18.0",
