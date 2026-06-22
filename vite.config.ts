@@ -23,7 +23,7 @@ process.env.VITE_APP_VERSION = pkg.version;
 // - LOCAL FORK OVERRIDE: if the sibling agora-sdk repo is present *and built* (dist/esm exists), we
 //   alias the package names at its dist so local SDK edits take effect without republishing. This is
 //   guarded by an on-disk check, so it is automatically OFF in the Docker build context / CI (the
-//   build context is the demo dir only — no sibling dir — so the `npm ci`'d packages are used there).
+//   build context is the demo dir only — no sibling dir — so the registry-installed packages are used).
 //   Rebuild the fork (`pnpm build-all` in ../agora-sdk) after editing it; restart this dev server to
 //   pick up a newly-present alias (Vite reads config at boot).
 //

@@ -18,10 +18,14 @@ treated as a literal filter) — check the server route against what the SDK act
 ## Commands
 
 ```bash
-npm run dev       # Vite dev server → http://localhost:5175
-npm run build     # tsc -b (typecheck) + vite build
-npm run preview   # serve the production build
+pnpm dev          # Vite dev server → http://localhost:5175
+pnpm build        # tsc -b (typecheck) + vite build
+pnpm preview      # serve the production build
 ```
+
+**pnpm is the package manager** — `pnpm-lock.yaml` is the single source of truth (there is no
+`package-lock.json`; don't run `npm install`, it would generate a divergent one). The pinned version
+lives in `package.json`'s `packageManager` field; `corepack enable` activates it.
 
 There are **no tests and no linter** — verification is manual, by clicking through the tabs. The
 build's `tsc -b` is the only static check.
@@ -31,7 +35,7 @@ build's `tsc -b` is the only static check.
 ```bash
 cd ../agora-server/apps/api && npm run dev                       # 1. boot Agora server (separate terminal)
 cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # 2. seed demo user (once)
-npm install && npm run dev                              # 3. run this demo
+pnpm install && pnpm dev                                # 3. run this demo
 ```
 
 Env is split in two — **both gitignored**; copy the committed `*.example` templates to start:
@@ -79,8 +83,8 @@ of an already-aliased dist (not add a new one), also clear Vite's pre-bundle —
 the cache on package version, not the aliased file's bytes, so a plain restart keeps serving the
 stale bundle.** The check is on-disk, so the
 alias is automatically **off in the Docker build context / CI** (build context is the demo dir only —
-no sibling — so the `npm ci`'d packages are used), keeping the image self-contained. To force npm
-even locally, remove/rename the fork's `dist`, or temporarily blank the alias.
+no sibling — so the registry-installed packages are used), keeping the image self-contained. To force
+the registry packages even locally, remove/rename the fork's `dist`, or temporarily blank the alias.
 
 The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parsed from
 `VITE_API_BASE_URL` in `App.tsx`); the SDK no longer sniffs env directly.

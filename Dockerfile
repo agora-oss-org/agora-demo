@@ -20,13 +20,20 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
 
 WORKDIR /app
 
-# Install deps first so this layer is cached until the lockfile changes.
-COPY package.json package-lock.json ./
-RUN npm ci
+# pnpm is the project's package manager (pnpm-lock.yaml is the single source of truth — there is no
+# package-lock.json). Corepack ships with node:22 and resolves the exact pnpm version pinned in
+# package.json's "packageManager" field. Disable the interactive download prompt for the build.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+
+# Install deps first so this layer is cached until the lockfile changes. --frozen-lockfile fails the
+# build if pnpm-lock.yaml is out of sync with package.json (the CI-safe, reproducible install).
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # App source (node_modules, dist, .env, etc. excluded via .dockerignore).
 COPY . .
 
 # vite.config.ts sets host:true + strictPort on 5175, so the dev server binds 0.0.0.0:5175.
 EXPOSE 5175
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]

@@ -6,6 +6,7 @@
   "description": "Demo/test app driving the @agora SDK hooks against a running Agora server",
   "author": "Jenova Marie <jenova-marie@proton.me>",
   "license": "MIT",
+  "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
