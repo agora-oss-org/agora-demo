@@ -93,9 +93,11 @@ secure-chat stack) → `Shell.tsx`.
 
 `Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
 authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
-(Feed, Spaces, Search, Secure Chat, Inbox, Me). The **🔒 Secure Chat** tab is the E2EE **secure chat** —
-`SecureChat` under `src/secure/`; the old non-encrypted socket.io chat surface has been removed as a
-top-level tab (that stack now survives only as space-scoped chat inside `SpaceView.tsx`). There is no
+(Feed, Spaces, Search, Chat, Secure Chat, Inbox, Me). There are **two** chat tabs: the **💬 Chat**
+tab is the non-encrypted socket.io DM/group surface (`Chat.tsx`), and the **🔒 Secure Chat** tab is
+the E2EE **secure chat** — `SecureChat` under `src/secure/`. Both ride the same `ChatProvider` socket
+(secure chat additionally uses the `/secure` namespace); the non-encrypted stack also powers
+space-scoped chat inside `SpaceView.tsx`. There is no
 router library — tabs, and drill-downs within a
 tab (entity detail, space detail, create forms), are all conditional renders swapped via local state.
 **Connections is no longer a top-level tab** — it lives, with Follows and Profile, as a sub-tab under
@@ -125,7 +127,8 @@ header comment):
 | `Feed.tsx` | `useEntityList` | list entities; routes to `CreateEntity` / `EntityView` |
 | `CreateEntity.tsx` | `useCreateEntity` | create an entity, optional `spaceId` + multipart image upload |
 | `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
-| `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList`; `useFetchSpaceConversation`, `ConversationProvider` + `useConversationContext` | top-level spaces, then recurse into subspaces + space-scoped entries; **space chat** is the realtime socket.io chat surface (the old DM/group `Chat.tsx` was removed, so this is its last consumer) |
+| `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList`; `useFetchSpaceConversation`, `ConversationProvider` + `useConversationContext` | top-level spaces, then recurse into subspaces + space-scoped entries; **space chat** is a space-scoped instance of the same socket.io chat surface as `Chat.tsx` |
+| `Chat.tsx` | `useConversations`, `ConversationProvider` + `useConversationContext`, `useChatContext`, `useCreateDirectConversation`, `useConversationMembers` | the **💬 Chat** tab: non-encrypted realtime socket.io chat — groups + DMs, image/file attachments, group member management |
 | `Search.tsx` | `useSearchContent` | semantic search (POST `/search/content`); entity hits open in `EntityView` |
 | `secure/SecureChat.tsx` (+ `SecureChatGate`, `SecureStoreContext`, `SecureUnlock`, `SecureStorePanel`, `SecureBootstrap`, `SecureThread`, `DevicePanel`, `SafetyNumberModal`) | `@agora-sdk/secure-chat-react-js`: `useSecureConversations`, `useSecureMessages`, `useSecureDevice`, `useSecureHandshakes`, `useSecureSafetyNumber`; `createEncryptedStore` | the **🔒 Secure Chat** tab: E2EE (MLS) secure DMs — device bootstrap/handshake drain, per-conversation decrypt, safety-number verification, **at-rest encryption** (password-gated `EncryptedStore`) |
 | `Connections.tsx` | `useFetchConnections`/`…SentPending…`/`…ReceivedPending…`, `useRequestConnection`, `useAcceptConnection`, `useSearchUsers` | connections: typeahead request, sent/received pending, accept/decline/cancel |
@@ -138,7 +141,8 @@ header comment):
 - Comment-section rendering merges `newComments` (optimistic, just-posted) **on top of** `comments`
   (server) until a refetch folds them together — see the comment in `EntityView.tsx`. Mirror this
   pattern for any other optimistic list.
-- Space-chat messages (`SpaceView.tsx`) come newest-first from the SDK; the thread reverses them for
+- Non-encrypted chat messages (`Chat.tsx` and space chat in `SpaceView.tsx`) come newest-first from
+  the SDK; the thread reverses them for
   display and compares `m.userId === user?.id` to style "mine". The open thread is wrapped in
   `ConversationProvider` (keyed by id so switching re-joins the socket room). Secure chat
   (`secure/SecureThread.tsx`) mirrors this but decides "mine" via `senderUserId === myUserId` and

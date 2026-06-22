@@ -8,6 +8,7 @@ import { ProfileViewerProvider } from "./ProfileViewer";
 import EntityView, { isOperatorToken } from "./EntityView";
 import Feed from "./Feed";
 import Search from "./Search";
+import Chat from "./Chat";
 import SecureChat from "./secure/SecureChat";
 import SecureUnlock from "./secure/SecureUnlock";
 import { useSecureStore } from "./secure/SecureStoreContext";
@@ -15,7 +16,7 @@ import Spaces from "./Spaces";
 import Notifications from "./Notifications";
 import Me from "./Me";
 
-type Tab = "feed" | "spaces" | "search" | "secure" | "notifications" | "profile";
+type Tab = "feed" | "spaces" | "search" | "chat" | "secure" | "notifications" | "profile";
 // Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
 // report). Two ids don't match their path: notifications→/inbox, profile→/me. Connections is no
 // longer a top-level tab — it lives under Me (records /connections from there).
@@ -23,6 +24,7 @@ const TAB_TO_PATH: Record<Tab, string> = {
   feed: PATHS.feed,
   spaces: PATHS.spaces,
   search: PATHS.search,
+  chat: PATHS.chat,
   secure: PATHS.secure,
   notifications: PATHS.inbox,
   profile: PATHS.me,
@@ -31,6 +33,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "feed", label: "📰 Feed" },
   { id: "spaces", label: "🏘️ Spaces" },
   { id: "search", label: "🔍 Search" },
+  { id: "chat", label: "💬 Chat" },
   { id: "secure", label: "🔒 Secure Chat" },
   { id: "notifications", label: "🔔 Inbox" },
   { id: "profile", label: "👤 Me" },
@@ -155,6 +158,7 @@ export default function Shell() {
       {tab === "feed" && <Feed />}
       {tab === "spaces" && <Spaces />}
       {tab === "search" && <Search />}
+      {tab === "chat" && <Chat />}
       {tab === "secure" && (unlocked ? <SecureChat /> : <SecureUnlock />)}
       {tab === "notifications" && (
         <Notifications
