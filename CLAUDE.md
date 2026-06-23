@@ -57,13 +57,27 @@ environment.
 ### Docker
 
 ```bash
-docker compose up --build     # Vite dev container (HMR) → http://localhost:5175
+docker compose up --build     # Vite dev container (HMR, target: dev) → http://localhost:5175
+docker build -t agora-demo .  # production image (target: prod, the default last stage) → nginx :80
 ```
 
-Dev container only (no nginx/prod image). `VITE_*` are baked from build args and overridable at
-runtime via `-e` / compose `environment:` (Vite reads them at dev-server start). Use
-`VITE_API_BASE_URL=http://host.docker.internal:4000/v7` to reach a server on the host. The build is
-self-contained because the SDK comes from npm (below) — no sibling dir in the build context.
+The `Dockerfile` is **multi-stage** with two shipping targets off a shared pnpm deps layer (`base`):
+
+- **`prod`** (default/last stage, what `docker-publish.yml` builds and what gets **deployed**):
+  `vite build` → `nginx:alpine` serving the static `dist/` on **:80** (config in `nginx.conf`). This
+  is the one to deploy publicly — the dev server serves every ES module out of `node_modules` over
+  HTTP, which fans a page load into hundreds of requests and gets **rate-limited (429)** behind a
+  public proxy (worsened by the secure-chat MLS/crypto dep graph). The built bundle is ~a dozen
+  hashed assets, no `node_modules` over HTTP. `VITE_*` are inlined at **build time** here, so the CI
+  passes them as build args.
+- **`dev`** (used by `docker compose`, `build.target: dev`): the Vite dev server with HMR on
+  **:5175**, with a source bind mount. `VITE_*` are read at **dev-server start** (overridable via
+  `-e` / compose `environment:`, no rebuild). Use
+  `VITE_API_BASE_URL=http://host.docker.internal:4000/v7` to reach a server on the host. **Never
+  deploy this stage.**
+
+The build is self-contained because the SDK comes from npm (below) — no sibling dir in the build
+context.
 
 ## How the SDK is consumed (critical to understand)
 

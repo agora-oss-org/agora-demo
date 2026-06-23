@@ -70,6 +70,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          # Build the production stage (vite build → nginx static serve), NOT the dev server. The dev
+          # server serves node_modules over HTTP and gets rate-limited (429) behind a public proxy.
+          target: prod
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
