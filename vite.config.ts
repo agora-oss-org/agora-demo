@@ -88,6 +88,23 @@ export default defineConfig({
     alias: { ...sdkAlias, ...secureAlias },
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
   },
+  build: {
+    rollupOptions: {
+      // Third-party crypto deps from the secure-chat graph (@hpke/common, @noble/*) ship pre-built
+      // ESM with /* @__PURE__ */ annotations Rollup can't attach to a call (misplaced, or sitting in
+      // commented-out code). They're inert — Rollup just strips the comment — so silence ONLY this
+      // INVALID_ANNOTATION code for those files; every other warning still surfaces.
+      onwarn(warning, defaultHandler) {
+        if (
+          warning.code === "INVALID_ANNOTATION" &&
+          /@hpke\/|@noble\//.test(warning.id ?? "")
+        ) {
+          return;
+        }
+        defaultHandler(warning);
+      },
+    },
+  },
   optimizeDeps: {
     include: [
       "@agora-sdk/core",
