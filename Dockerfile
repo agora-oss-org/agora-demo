@@ -57,5 +57,10 @@ RUN pnpm build   # tsc -b (typecheck) + vite build → /app/dist
 FROM nginx:alpine AS prod
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+# Runtime retargeting: nginx:alpine runs /docker-entrypoint.d/*.sh before starting nginx. This one
+# rewrites /config.js from AGORA_DEMO_* env so a single published image can point at any API (local,
+# self-host, public) without a rebuild. See docker-entrypoint.d/40-agora-config.sh + src/config.ts.
+COPY docker-entrypoint.d/40-agora-config.sh /docker-entrypoint.d/40-agora-config.sh
+RUN chmod +x /docker-entrypoint.d/40-agora-config.sh
 EXPOSE 80
 # nginx:alpine's base image already runs nginx in the foreground as its CMD.

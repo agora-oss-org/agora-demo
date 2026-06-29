@@ -9,9 +9,7 @@ import * as secureReactJs from "@agora-sdk/secure-chat-react-js";
 import SecureBootstrap from "./SecureBootstrap";
 import { SecureStoreContext, type SecureStoreApi } from "./SecureStoreContext";
 import { track } from "../analytics";
-
-const PROJECT_ID = import.meta.env.VITE_PROJECT_ID;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL, PROJECT_ID } from "../config";
 
 // `createEncryptedStore` ships in the local fork (the aliased dist) but isn't in the published npm
 // types yet — same as the `VERSION` export read loosely in Shell.tsx. Pull it off the namespace and

@@ -7,6 +7,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Runtime config: a classic (non-deferred) script, so window.__AGORA__ is set BEFORE the deferred
+         module bundle below reads it (src/config.ts). In the container the nginx entrypoint rewrites
+         this file from AGORA_DEMO_* env; in `pnpm dev` it's the empty public/ stub (env fallback wins). -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

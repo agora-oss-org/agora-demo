@@ -65,6 +65,11 @@ const secureAlias: Record<string, string> = useLocalSecure
   : {};
 
 export default defineConfig({
+  // Relative base so the SAME built bundle works mounted at ANY path: the public demo at root (/) AND
+  // the self-host compose at /demo/ (Caddy's handle_path strips the prefix). Asset refs become ./assets/…
+  // resolved against the document URL. Safe here because the demo has no history-API router (tabs are
+  // local state; deep links ride ?entity= on /), which is the one case relative base can't handle.
+  base: "./",
   plugins: [react()],
   server: {
     // Bind all interfaces (IPv4 0.0.0.0 + IPv6 ::) so both `localhost`→127.0.0.1 and ::1 reach
