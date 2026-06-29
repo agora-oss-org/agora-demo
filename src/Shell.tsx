@@ -95,6 +95,18 @@ export default function Shell() {
   // on whatever tab you're on).
   const { unlocked } = useSecureStore();
   const [tab, setTab] = useState<Tab>("feed");
+  // Re-clicking the already-active Feed/Spaces tab should drop any drill-down (entity/space detail,
+  // create forms, nested subspaces) and return to the tab root. That state lives *inside* Feed/Spaces
+  // as local state, so we reset it by remounting: bump a per-tab key on a same-tab click, which
+  // unmounts the drilled-in tree and mounts a fresh one. Only feed/spaces opt in (their keys read
+  // this); other tabs ignore it.
+  const [rootKey, setRootKey] = useState<Partial<Record<Tab, number>>>({});
+  const selectTab = (id: Tab) => {
+    if (id === tab && (id === "feed" || id === "spaces")) {
+      setRootKey((k) => ({ ...k, [id]: (k[id] ?? 0) + 1 }));
+    }
+    setTab(id);
+  };
   // Capture any ?entity=…&comment=… deep link once, synchronously, before the effect strips it from
   // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
   const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());
@@ -149,14 +161,14 @@ export default function Shell() {
 
       <div className="tabs">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+          <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => selectTab(t.id)}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === "feed" && <Feed />}
-      {tab === "spaces" && <Spaces />}
+      {tab === "feed" && <Feed key={`feed-${rootKey.feed ?? 0}`} />}
+      {tab === "spaces" && <Spaces key={`spaces-${rootKey.spaces ?? 0}`} />}
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
       {tab === "secure" && (unlocked ? <SecureChat /> : <SecureUnlock />)}
