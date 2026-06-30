@@ -64,6 +64,26 @@ const secureAlias: Record<string, string> = useLocalSecure
     }
   : {};
 
+// Social SDK (agora-sdk-plus) local-fork override — same on-disk-guarded mechanism as the
+// secure-chat block above, but only two packages (no crypto subpaths). When the sibling
+// agora-sdk-plus/packages/social workspace is present AND built (dist/esm exists) we alias the
+// package names at its dist so local SDK edits take effect without republishing; OFF automatically
+// when the sibling isn't present (Docker/CI build context is the demo dir only → npm packages used).
+const socialRoot = (p: string) =>
+  fileURLToPath(new URL(`../agora-sdk-plus/packages/social/${p}`, import.meta.url));
+const socialCoreEsm = socialRoot("core/dist/esm/index.js");
+const useLocalSocial = existsSync(socialCoreEsm);
+if (useLocalSocial) {
+  // eslint-disable-next-line no-console
+  console.log("[vite] @agora-sdk/social-* → LOCAL workspace (dist/esm). Rebuild the fork after edits.");
+}
+const socialAlias: Record<string, string> = useLocalSocial
+  ? {
+      "@agora-sdk/social-core": socialCoreEsm,
+      "@agora-sdk/social-react-js": socialRoot("react-js/dist/esm/index.js"),
+    }
+  : {};
+
 export default defineConfig({
   // Relative base so the SAME built bundle works mounted at ANY path: the public demo at root (/) AND
   // the self-host compose at /demo/ (Caddy's handle_path strips the prefix). Asset refs become ./assets/…
@@ -90,7 +110,7 @@ export default defineConfig({
     allowedHosts: [".intra.recoverysky.net"],
   },
   resolve: {
-    alias: { ...sdkAlias, ...secureAlias },
+    alias: { ...sdkAlias, ...secureAlias, ...socialAlias },
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
   },
   build: {
@@ -114,12 +134,15 @@ export default defineConfig({
     include: [
       "@agora-sdk/core",
       "@agora-sdk/react-js",
+      "@agora-sdk/social-core",
+      "@agora-sdk/social-react-js",
       "react",
       "react-dom",
       "react-redux",
       "@reduxjs/toolkit",
       "axios",
       "socket.io-client",
+      "d3-force",
     ],
     exclude: [
       "@agora-sdk/secure-chat-core",

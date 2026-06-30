@@ -43,7 +43,9 @@ export type AnalyticsEvent =
   // follows (one-way)
   | "follow_user" | "unfollow_user"
   // profile / discovery
-  | "update_profile" | "submit_search" | "change_feed_sort";
+  | "update_profile" | "submit_search" | "change_feed_sort"
+  // social graph (read-only lenses) — metadata: { lens: "weather"|"constellation"|"neighborhood" } or { on: boolean }
+  | "social_lens_rendered" | "social_interactions_toggled" | "social_refreshed";
 
 // Virtual page-view paths for the no-router SPA — tabs + drill-down details. Centralized so Shell
 // and the detail views share one set of names (Umami's "Pages" report keys off these).
@@ -53,6 +55,7 @@ export const PATHS = {
   search: "/search",
   chat: "/chat",
   secure: "/secure",
+  social: "/social",
   connections: "/connections",
   follows: "/follows",
   inbox: "/inbox",
