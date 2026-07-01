@@ -7,8 +7,8 @@ import SafetyNumberModal from "./SafetyNumberModal";
 // never raw bytes (see status handling below). SDK returns newest-first, so we reverse for display.
 // "Mine" is decided by senderUserId === myUserId (secure messages DO carry a sender user id).
 export default function SecureThread({
-  conversationId, myUserId,
-}: { conversationId: string; myUserId?: string }) {
+  conversationId, myUserId, peerLabel,
+}: { conversationId: string; myUserId?: string; peerLabel?: string }) {
   const { messages, hasMore, loadMore, sendMessage, error } = useSecureMessages(conversationId) as any;
   const [text, setText] = useState("");
   const [showSafety, setShowSafety] = useState(false);
@@ -30,7 +30,7 @@ export default function SecureThread({
   return (
     <div className="panel col" style={{ height: 480 }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <strong>🔒 {conversationId.slice(0, 8)}</strong>
+        <strong>🔒 {peerLabel || conversationId.slice(0, 8)}</strong>
         <button className="linklike" onClick={() => setShowSafety(true)} title="verify identity keys">
           🔢 safety number
         </button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFetchConnections, useUser } from "@agora-sdk/react-js";
 import { useSecureConversations } from "@agora-sdk/secure-chat-react-js";
 import { track } from "../analytics";
@@ -6,16 +6,24 @@ import SecureThread from "./SecureThread";
 import SecureStorePanel from "./SecureStorePanel";
 import DevicePanel from "./DevicePanel";
 
-// The app's only chat surface (the old non-encrypted DM/group Chat.tsx was removed). A
+// username → name → id-slice, matching AuthorTag's convention (EntityView.tsx).
+function displayName(u: any): string {
+  return u?.username || u?.name || u?.id?.slice(0, 8) || "unknown";
+}
+
+// The E2EE chat surface (see Chat.tsx for the non-encrypted socket.io equivalent). A
 // connection-picker starts DMs, but createDirectConversation runs the MLS handshake under the
 // hood (claim a KeyPackage per peer device → build the group locally → relay targeted Welcomes); the
-// group secrets never leave the client. The list comes from the blind server; titles fall back to ids
-// (the demo doesn't resolve secure rosters to handles).
+// group secrets never leave the client. SecureConversationModel carries no counterparty field (only
+// `createdById`), so titles are resolved best-effort: conversations the *peer* started are matched
+// via `createdById` against the connections list; conversations *we* started are remembered locally
+// (peerNames) since we know the target right when we create them. Either miss falls back to the id.
 export default function SecureChat() {
   const { conversations, loading, createDirectConversation, refresh, error } = useSecureConversations() as any;
   const fetchConnections = useFetchConnections() as any;
   const { user } = useUser() as any;
   const [contacts, setContacts] = useState<any[]>([]);
+  const [peerNames, setPeerNames] = useState<Record<string, string>>({});
   const [target, setTarget] = useState("");
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,13 +33,28 @@ export default function SecureChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const contactsById = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const c of contacts) if (c.connectedUser?.id) map.set(c.connectedUser.id, c.connectedUser);
+    return map;
+  }, [contacts]);
+
+  const conversationLabel = (c: any): string => {
+    if (peerNames[c.id]) return peerNames[c.id];
+    const peerId = c.createdById && c.createdById !== user?.id ? c.createdById : null;
+    const peer = peerId ? contactsById.get(peerId) : undefined;
+    return peer ? displayName(peer) : c.id.slice(0, 8);
+  };
+
   const startDm = async () => {
     if (!target) return;
     setBusy(true);
     try {
+      const peer = contactsById.get(target);
       const convo = await createDirectConversation(target);
       track("create_dm", { secure: true });
       await refresh();
+      if (peer) setPeerNames((prev) => ({ ...prev, [convo.id]: displayName(peer) }));
       setActive(convo.id);
       setTarget("");
     } catch {
@@ -55,7 +78,7 @@ export default function SecureChat() {
               <option value="">{contacts.length ? "encrypt a DM with…" : "no connections yet"}</option>
               {contacts.map((c: any) => (
                 <option key={c.id} value={c.connectedUser?.id}>
-                  @{c.connectedUser?.username || c.connectedUser?.id?.slice(0, 8)}
+                  @{displayName(c.connectedUser)}
                 </option>
               ))}
             </select>
@@ -67,7 +90,7 @@ export default function SecureChat() {
             {conversations.map((c: any) => (
               <div key={c.id} className={"card" + (active === c.id ? " mine" : "")}
                    style={{ cursor: "pointer", marginBottom: 6 }} onClick={() => setActive(c.id)}>
-                <strong>🔒 {c.id.slice(0, 8)}</strong>
+                <strong>🔒 {conversationLabel(c)}</strong>
                 <div className="muted">{c.type}</div>
               </div>
             ))}
@@ -75,7 +98,17 @@ export default function SecureChat() {
         </div>
         <div className="spacer" style={{ flex: 1 }}>
           {active
-            ? <SecureThread key={active} conversationId={active} myUserId={user?.id} />
+            ? (
+              <SecureThread
+                key={active}
+                conversationId={active}
+                myUserId={user?.id}
+                peerLabel={(() => {
+                  const c = conversations.find((x: any) => x.id === active);
+                  return c ? conversationLabel(c) : undefined;
+                })()}
+              />
+            )
             : <div className="panel muted">Select or start a secure DM →</div>}
         </div>
       </div>
