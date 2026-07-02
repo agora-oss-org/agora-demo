@@ -9,8 +9,11 @@
 #     source bind mount. Never deploy this stage.
 #
 # VITE_* are inlined into the bundle by Vite. In `dev` they're read at dev-server START from the
-# runtime env (compose passes them); in `build` they must be present at BUILD time (vite build bakes
-# them into the static assets). The published image is public → these are non-secret demo creds.
+# runtime env (compose passes them) — no baking involved, it's a live process. `build` takes NO VITE_*
+# args at all: the `prod` stage's nginx entrypoint (docker-entrypoint.d/40-agora-config.sh) always
+# regenerates /config.js from AGORA_DEMO_* at every container start, and src/config.ts reads that
+# BEFORE the baked import.meta.env.VITE_* fallback — so there's nothing worth baking into the `prod`
+# bundle to begin with (see src/config.ts for the full runtime-config story).
 
 # ── base: pnpm + dependencies (shared by dev and build) ───────────────────────
 FROM node:22-slim AS base
@@ -42,14 +45,6 @@ CMD ["pnpm", "run", "dev"]
 
 # ── build: produce the static production bundle ───────────────────────────────
 FROM base AS build
-ARG VITE_API_BASE_URL=https://agora.recoverysky.net/v7
-ARG VITE_PROJECT_ID=11111111-1111-1111-1111-111111111111
-ARG VITE_DEMO_EMAIL=agora-demo@gmail.com
-ARG VITE_DEMO_PASSWORD=DemoPass123!
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
-    VITE_PROJECT_ID=$VITE_PROJECT_ID \
-    VITE_DEMO_EMAIL=$VITE_DEMO_EMAIL \
-    VITE_DEMO_PASSWORD=$VITE_DEMO_PASSWORD
 COPY . .
 RUN pnpm build   # tsc -b (typecheck) + vite build → /app/dist
 
