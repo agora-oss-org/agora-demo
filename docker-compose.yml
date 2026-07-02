@@ -13,18 +13,24 @@ services:
       # Local compose wants the HMR dev server instead, so target the `dev` stage explicitly.
       target: dev
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://agora.recoverysky.net/v7}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost/v7}
         VITE_PROJECT_ID: ${VITE_PROJECT_ID:-11111111-1111-1111-1111-111111111111}
-        VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-demo@gmail.com}
+        VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-admin@gmail.com}
         VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-DemoPass123!}
     ports:
       - "5175:5175"
     environment:
-      # Runtime overrides — Vite reads these on dev-server start, no rebuild needed.
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://agora.recoverysky.net/v7}
+      # Runtime overrides — Vite reads these on dev-server start, no rebuild needed. Defaults mirror
+      # .env; ADMIN_URL/UMAMI default empty (feature hidden / analytics off) and SECURE_CHAT_DEBUG
+      # defaults off, same as an unset VITE_* would bake to.
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost/v7}
       VITE_PROJECT_ID: ${VITE_PROJECT_ID:-11111111-1111-1111-1111-111111111111}
-      VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-demo@gmail.com}
+      VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-admin@gmail.com}
       VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-DemoPass123!}
+      VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}
+      VITE_AGORA_SECURE_CHAT_DEBUG: ${VITE_AGORA_SECURE_CHAT_DEBUG:-false}
+      VITE_AGORA_UMAMI_URL: ${VITE_AGORA_UMAMI_URL:-}
+      VITE_AGORA_UMAMI_DEMO_ID: ${VITE_AGORA_UMAMI_DEMO_ID:-}
     volumes:
       - .:/app
       - /app/node_modules
