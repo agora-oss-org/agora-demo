@@ -10,7 +10,7 @@ set -eu
 
 : "${AGORA_DEMO_API_BASE_URL:=https://agora.recoverysky.net/v7}"
 : "${AGORA_DEMO_PROJECT_ID:=11111111-1111-1111-1111-111111111111}"
-: "${AGORA_DEMO_EMAIL:=agora-demo@gmail.com}"
+: "${AGORA_DEMO_EMAIL:=agora-123@gmail.com}"
 : "${AGORA_DEMO_PASSWORD:=DemoPass123!}"
 : "${AGORA_DEMO_ADMIN_URL:=}"
 : "${AGORA_DEMO_SECURE_CHAT_DEBUG:=false}"
