@@ -30,7 +30,10 @@ const runtime = (typeof window !== "undefined" && window.__AGORA__) || {};
 // derives the socket.io origin via `new URL(baseUrl)`, which throws on a relative path.
 export const API_BASE_URL: string = runtime.apiBaseUrl || import.meta.env.VITE_API_BASE_URL;
 
-export const PROJECT_ID: string = runtime.projectId || import.meta.env.VITE_PROJECT_ID;
+// Falls back to the well-known demo project id (matches the Dockerfile/compose/entrypoint defaults)
+// so this is never undefined even if nothing upstream set it.
+export const PROJECT_ID: string =
+  runtime.projectId || import.meta.env.VITE_PROJECT_ID || "11111111-1111-1111-1111-111111111111";
 
 // Login prefill for the demo account.
 export const DEMO_EMAIL: string = runtime.demoEmail || import.meta.env.VITE_DEMO_EMAIL || "";
