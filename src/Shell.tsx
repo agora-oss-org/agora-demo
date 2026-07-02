@@ -17,7 +17,7 @@ import Notifications from "./Notifications";
 import Me from "./Me";
 import Social from "./Social";
 import { SocialProvider } from "@agora-sdk/social-core";
-import { API_BASE_URL, PROJECT_ID } from "./config";
+import { API_BASE_URL, PROJECT_ID, ADMIN_URL } from "./config";
 
 type Tab = "feed" | "spaces" | "search" | "chat" | "secure" | "social" | "notifications" | "profile";
 // Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
@@ -44,8 +44,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "profile", label: "👤 Me" },
 ];
 
-// Optional link to the separate admin app (opens in a new tab). Hidden when VITE_ADMIN_URL is unset.
-const ADMIN_URL = import.meta.env.VITE_ADMIN_URL;
 // App version (package.json), inlined by vite.config.ts → shown in the header so a deploy's build is
 // identifiable at a glance.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION;

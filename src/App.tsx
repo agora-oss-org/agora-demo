@@ -2,13 +2,13 @@ import { ReplykeProvider, ChatProvider } from "@agora-sdk/react-js";
 import { setSecureChatDebug } from "@agora-sdk/secure-chat-core";
 import Shell from "./Shell";
 import SecureChatGate from "./secure/SecureChatGate";
-import { API_BASE_URL, PROJECT_ID } from "./config";
+import { API_BASE_URL, PROJECT_ID, SECURE_CHAT_DEBUG as SECURE_CHAT_DEBUG_RAW } from "./config";
 
 // Secure-chat trace/debug logging, gated on VITE_AGORA_SECURE_CHAT_DEBUG (off by default). The SDK's
 // own AGORA_SECURE_CHAT_DEBUG / process.env path is Node-only and never fires in a Vite browser
 // build, so we flip the global switch here at import time. "debug" = digestible status lines;
 // anything else truthy ("true"/"1"/"trace") = everything incl. full raw payload dumps. Dev aid only.
-const SECURE_CHAT_DEBUG = (import.meta.env.VITE_AGORA_SECURE_CHAT_DEBUG ?? "").toLowerCase();
+const SECURE_CHAT_DEBUG = SECURE_CHAT_DEBUG_RAW.toLowerCase();
 if (!["", "false", "0", "off", "no"].includes(SECURE_CHAT_DEBUG)) {
   const level = SECURE_CHAT_DEBUG === "debug" ? "debug" : "trace";
   setSecureChatDebug(true, level);

@@ -13,8 +13,7 @@
 // - This app has no router (tab switches don't change the URL), so Umami's auto-track records a
 //   single pageview on load. Per-tab views are explicit via trackPageView() — wired later.
 
-const UMAMI_URL = import.meta.env.VITE_AGORA_UMAMI_URL as string | undefined;
-const WEBSITE_ID = import.meta.env.VITE_AGORA_UMAMI_DEMO_ID as string | undefined;
+import { UMAMI_URL, UMAMI_DEMO_ID as WEBSITE_ID } from "./config";
 
 // True only when both the host and website id are configured (so local dev without the env
 // vars is a clean no-op rather than a console error).

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth, useOAuthSignIn } from "@agora-sdk/react-js";
 import { track } from "./analytics";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "./config";
 
 // Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens),
 // plus GitHub OAuth via useOAuthSignIn (→ /oauth/authorize → Supabase-brokered → /oauth/callback,
@@ -8,8 +9,8 @@ import { track } from "./analytics";
 export default function Login() {
   const { signInWithEmailAndPassword, signUpWithEmailAndPassword } = useAuth();
   const { initiateOAuth, isLoading: oauthBusy, error: oauthErr } = useOAuthSignIn() as any;
-  const [email, setEmail] = useState(import.meta.env.VITE_DEMO_EMAIL || "");
-  const [password, setPassword] = useState(import.meta.env.VITE_DEMO_PASSWORD || "");
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [mode, setMode] = useState<"in" | "up">("in");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
