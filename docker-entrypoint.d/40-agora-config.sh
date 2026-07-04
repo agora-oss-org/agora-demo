@@ -16,6 +16,13 @@ set -eu
 : "${AGORA_DEMO_SECURE_CHAT_DEBUG:=false}"
 : "${AGORA_DEMO_UMAMI_URL:=}"
 : "${AGORA_DEMO_UMAMI_ID:=}"
+# Origin the Agora server stamps into sign-up / password-reset / verification-email links (the SDK's
+# emailRedirectTo, see src/config.ts). Defaults to the public demo's own front-end origin — same
+# convention as AGORA_DEMO_API_BASE_URL defaulting to its backend above — so those emails land back
+# here even without an explicit override. A self-hosted deployment should override this to its own
+# public origin (empty is also fine: the SDK falls back to window.location.origin, which is only
+# wrong when mounted under a path prefix).
+: "${AGORA_DEMO_EMAIL_REDIRECT_TO:=https://demo.agora-oss.org}"
 
 cat > /usr/share/nginx/html/config.js <<EOF
 window.__AGORA__ = {
@@ -27,6 +34,7 @@ window.__AGORA__ = {
   secureChatDebug: "${AGORA_DEMO_SECURE_CHAT_DEBUG}",
   umamiUrl: "${AGORA_DEMO_UMAMI_URL}",
   umamiDemoId: "${AGORA_DEMO_UMAMI_ID}",
+  emailRedirectTo: "${AGORA_DEMO_EMAIL_REDIRECT_TO}",
 };
 EOF
 

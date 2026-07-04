@@ -56,6 +56,7 @@ verification is manual; `tsc -b` in the build is the only static check.
 | `VITE_PROJECT_ID` | Project id passed to `AgoraProvider` |
 | `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` | Prefilled login credentials |
 | `VITE_ADMIN_URL` | *(optional)* Admin app URL; shows an **Admin** link in the header when set |
+| `VITE_AGORA_EMAIL_REDIRECT_TO` | *(optional)* Origin stamped into sign-up/reset/verify email links; blank falls back to `window.location.origin` |
 
 `VITE_API_BASE_URL` is parsed in `App.tsx` and passed to `AgoraProvider` via its `baseUrl` prop.
 

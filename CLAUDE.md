@@ -38,21 +38,33 @@ cd ../agora-server/apps/api && node scripts/seed-demo-user.mjs   # 2. seed demo 
 pnpm install && pnpm dev                                # 3. run this demo
 ```
 
-Env is split in two — **both gitignored**; copy the committed `*.example` templates to start:
+Env lives in one **gitignored** `.env` (← the committed `.env.example` template), read NATIVELY by
+Vite — no hand-loading. It has two sections, and the split is deliberate:
 
-- **`env.vite`** (← `env.vite.example`) — most of the client `VITE_*` vars. `vite.config.ts` loads
-  it via Node's native `process.loadEnvFile`, and Vite inlines `VITE_*` into the bundle:
-  `VITE_API_BASE_URL` (the example defaults to a local server `http://localhost:4000/v7`; set
-  `https://agora.recoverysky.net/v7` to test the deployed one), `VITE_DEMO_EMAIL`, `VITE_ADMIN_URL`,
-  and the Umami tracker vars.
-- **`.env`** (← `.env.example`) — `AGORA_UMAMI_API_KEY` (a true secret: **not** `VITE_`-prefixed, so
-  Vite never bundles it — the server-side Umami *reporting* key) **plus** `VITE_DEMO_PASSWORD` (the
-  login prefill — it *is* `VITE_`-prefixed and Vite reads `.env` by default, so it still ships in the
-  bundle as the prefill needs; kept beside the other credential).
+- **`VITE_*`** — read LIVE by Vite at dev-server-start (`pnpm dev`, `docker compose up` dev target).
+  `VITE_API_BASE_URL` (defaults to a local server `http://localhost:4000/v7`; set
+  `https://agora.recoverysky.net/v7` to test the deployed one), `VITE_DEMO_EMAIL`/`VITE_DEMO_PASSWORD`,
+  `VITE_ADMIN_URL`, the Umami tracker vars, `VITE_AGORA_SECURE_CHAT_DEBUG`, and
+  `VITE_AGORA_EMAIL_REDIRECT_TO` (see below). Changing these takes effect on the next start, no
+  rebuild — fine to leave blank.
+- **`AGORA_DEMO_*`** — read by the **published `prod` image's** nginx entrypoint
+  (`docker-entrypoint.d/40-agora-config.sh`) at **container start**, written into `/config.js`
+  (`window.__AGORA__`), which `src/config.ts` reads before ever falling back to a baked `VITE_*`
+  value. This is what actually configures anything deployed — `vite build` inlines `VITE_*` into the
+  static bundle forever, so real deployment values must never be Docker build-args; they're
+  `AGORA_DEMO_*` container env instead.
+- `AGORA_UMAMI_API_KEY` is the one true secret (not `VITE_`-prefixed — server-side Umami *reporting*
+  key; the browser tracker never needs it, so it has no `AGORA_DEMO_*` runtime counterpart).
 
-The `env.vite` load is guarded by an on-disk check, so in Docker/CI — where `env.vite` is absent and
-`VITE_*` arrive from build args / `-e` — it's skipped and the vars are read straight from the
-environment.
+`AGORA_DEMO_EMAIL_REDIRECT_TO` / `VITE_AGORA_EMAIL_REDIRECT_TO` feed `@agora-sdk/core`'s
+`emailRedirectTo` (divergence #6) — the origin stamped into sign-up / password-reset /
+verification-email links so they return to *this* front-end. The SDK has no provider prop for it
+(unlike `baseUrl`); it reads `import.meta.env.VITE_AGORA_EMAIL_REDIRECT_TO` (or
+`window.__vite_env`, checked first — see `src/config.ts`) → falls back to `window.location.origin`.
+`src/config.ts` bridges a runtime `AGORA_DEMO_EMAIL_REDIRECT_TO` value into `window.__vite_env` so
+the prod image can carry this without baking a real origin into the bundle. The entrypoint defaults
+it to the public demo's own origin (`https://demo.agora-oss.org`) — same convention as
+`AGORA_DEMO_API_BASE_URL` defaulting to its backend.
 
 ### Docker
 

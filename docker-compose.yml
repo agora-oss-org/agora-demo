@@ -36,6 +36,7 @@ services:
       VITE_AGORA_SECURE_CHAT_DEBUG: ${AGORA_DEMO_SECURE_CHAT_DEBUG:-false}
       VITE_AGORA_UMAMI_URL: ${AGORA_DEMO_UMAMI_URL:-}
       VITE_AGORA_UMAMI_DEMO_ID: ${AGORA_DEMO_UMAMI_ID:-}
+      VITE_AGORA_EMAIL_REDIRECT_TO: ${AGORA_DEMO_EMAIL_REDIRECT_TO:-}
     volumes:
       - .:/app
       - /app/node_modules

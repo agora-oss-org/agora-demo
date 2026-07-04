@@ -4,7 +4,7 @@
 // ONE published image fully retargetable (no rebuild, no baked .env at all), the container's nginx
 // entrypoint (docker-entrypoint.d/40-agora-config.sh) writes /config.js at start —
 //   window.__AGORA__ = { apiBaseUrl, projectId, demoEmail, demoPassword, adminUrl, secureChatDebug,
-//                         umamiUrl, umamiDemoId }
+//                         umamiUrl, umamiDemoId, emailRedirectTo }
 // — and index.html loads it BEFORE the app bundle. We read that here first, falling back to the baked
 // import.meta.env.VITE_* (which is what `pnpm dev` uses: there's no runtime /config.js in dev, just an
 // empty public/ stub, so the fallback wins). VITE_APP_VERSION is intentionally NOT here — it's the
@@ -20,7 +20,12 @@ declare global {
       secureChatDebug?: string;
       umamiUrl?: string;
       umamiDemoId?: string;
+      emailRedirectTo?: string;
     };
+    // @agora-sdk/core's getEnvVar() checks this global BEFORE import.meta.env (see its
+    // utils/env.ts) — the one runtime-injectable seam it exposes. We use it below to carry
+    // emailRedirectTo through without baking a real origin into the prod bundle.
+    __vite_env?: Record<string, string>;
   }
 }
 
@@ -50,3 +55,16 @@ export const SECURE_CHAT_DEBUG: string =
 export const UMAMI_URL: string | undefined = runtime.umamiUrl || import.meta.env.VITE_AGORA_UMAMI_URL;
 export const UMAMI_DEMO_ID: string | undefined =
   runtime.umamiDemoId || import.meta.env.VITE_AGORA_UMAMI_DEMO_ID;
+
+// Origin the Agora server stamps into sign-up / password-reset / verification-email links, so they
+// return the user to THIS front-end instead of the server's own default. @agora-sdk/core resolves it
+// itself via getEmailRedirectTo() → getEnvVar("AGORA_EMAIL_REDIRECT_TO") → window.location.origin; it
+// has no provider prop or setter for it (unlike apiBaseUrl), so window.location.origin already gets
+// this right for the common case (any deployment's users load the page from its real origin). This
+// override exists for deployments where that's not enough — e.g. a path-prefixed mount, where
+// window.location.origin is missing the prefix the emailed link needs to land back on. Left unset,
+// nothing changes (getEnvVar falls through to window.location.origin as before).
+const EMAIL_REDIRECT_TO: string = runtime.emailRedirectTo || import.meta.env.VITE_AGORA_EMAIL_REDIRECT_TO || "";
+if (typeof window !== "undefined" && EMAIL_REDIRECT_TO) {
+  window.__vite_env = { ...window.__vite_env, VITE_AGORA_EMAIL_REDIRECT_TO: EMAIL_REDIRECT_TO };
+}
