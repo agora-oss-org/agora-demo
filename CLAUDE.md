@@ -100,17 +100,18 @@ alias is automatically **off in the Docker build context / CI** (build context i
 no sibling — so the registry-installed packages are used), keeping the image self-contained. To force
 the registry packages even locally, remove/rename the fork's `dist`, or temporarily blank the alias.
 
-The SDK takes its server URL from the `baseUrl` prop on `ReplykeProvider` (parsed from
+The SDK takes its server URL from the `baseUrl` prop on `AgoraProvider` (parsed from
 `VITE_API_BASE_URL` in `App.tsx`); the SDK no longer sniffs env directly.
 
 ## Architecture
 
-`main.tsx` → `App.tsx` (`ReplykeProvider` projectId+baseUrl, then `ChatProvider` for the socket.io
+`main.tsx` → `App.tsx` (`AgoraProvider` projectId+baseUrl, then `ChatProvider` for the socket.io
 connection — still used by **space chat** in `SpaceView.tsx` — then `SecureChatGate` for the E2EE
 secure-chat stack) → `Shell.tsx`.
 
-`Shell.tsx` is the auth gate and tab router: `useAuth()` gives `initialized`/`accessToken`; until
-authed it renders `Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
+`Shell.tsx` is the auth gate and tab router: `@agora-sdk/auth-react-js`'s `useAuthStatus()` gives the
+canonical `'initializing' | 'authenticated' | 'unauthenticated'` signal; until authed it renders
+`Login.tsx`, otherwise a simple `useState` tab switch across the feature panels
 (Feed, Spaces, Search, Chat, Secure Chat, Inbox, Me). There are **two** chat tabs: the **💬 Chat**
 tab is the non-encrypted socket.io DM/group surface (`Chat.tsx`), and the **🔒 Secure Chat** tab is
 the E2EE **secure chat** — `SecureChat` under `src/secure/`. Both ride the same `ChatProvider` socket
@@ -127,17 +128,24 @@ tab (entity detail, space detail, create forms), are all conditional renders swa
   the tabs, with a back-target that remembers where you came from.
 - **Profile overlay.** Everything is wrapped in `ProfileViewerProvider` so any `AuthorTag` anywhere
   can call `openProfile(userId)` — see the overlay convention below.
-- **Session.** `useTokenRefresh()` proactively rotates the access token before its TTL; sign-out uses
-  `useSignOutAll().signOutAll` (clears **all** persisted accounts), **not** `useAuth().signOut()`
-  (which switches to a remaining account instead of ending the session). OAuth round-trips return
-  tokens in the URL fragment, handled once via `handleOAuthCallback()`.
+- **Session.** `useTokenRefresh()` proactively rotates the access token before its TTL;
+  `useAuthSelfHeal()` (also `@agora-sdk/auth-react-js`) prunes a dead active account once on mount so
+  a stale-only session doesn't get stuck on a silent 401; sign-out uses
+  `useSignOutEverywhere().signOutEverywhere` (clears **all** persisted accounts), **not**
+  `useAuth().signOut()` (which switches to a remaining account instead of ending the session).
+- **Auth email links.** The server emails `{origin}/auth/verify-email` and
+  `{origin}/auth/reset-password` links (signup confirmation, forgot-password). Since there's no
+  router, `Shell.tsx` hand-matches `window.location.pathname` for those two suffixes (same spirit as
+  the `?entity=` deep link) and renders `@agora-sdk/auth-react-js`'s `EmailVerificationHandler` /
+  `PasswordResetHandler` full-bleed instead of the normal gate/tab UI — before the loading/login
+  check, since both can land while signed out.
 
 Each feature file maps to one SDK surface (and the server route it hits, noted in each file's
 header comment):
 
 | File | SDK hook(s) / provider | Exercises |
 |------|------------------------|-----------|
-| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`, `signUpWithEmailAndPassword`), `useOAuthSignIn` | `/auth`; handles the email-confirmation sign-up flow + OAuth |
+| `Login.tsx` | `useAuth` (`signInWithEmailAndPassword`, `signUpWithEmailAndPassword`), `useRequestPasswordReset`; `@agora-sdk/auth-react-js`'s `ResendVerificationButton` | `/auth`; email/password only (no OAuth) — the email-confirmation sign-up flow + forgot-password request |
 | `Me.tsx` | — (sub-tab host) | the current user's area: switches between `Profile` / `Connections` / `Follows` sub-views |
 | `Profile.tsx` | `useUser().updateUser` | edit own username/name/bio/avatar (PATCH `/users/:id`) — landing sub-view of Me |
 | `Follows.tsx` | `useFetchFollowing`, `useFetchFollowers`, `useUnfollowByFollowId` | one-way follows (no accept step); distinct from Connections — Me sub-view |

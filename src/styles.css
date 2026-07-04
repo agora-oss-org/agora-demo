@@ -73,6 +73,12 @@ a { color: var(--accent); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 .dot.on { background: #4ade80; } .dot.off { background: #f87171; }
 .error { color: #f87171; font-size: 13px; }
+/* @agora-sdk/auth-react-js's PasswordResetHandler/ResendVerificationButton ship stable, unstyled
+   classNames precisely so the consuming app can skin them — this is that skin. */
+.agora-password-reset { display: flex; flex-direction: column; gap: 8px; }
+.agora-password-reset-field { font-size: 13px; color: var(--muted); }
+.agora-password-reset-error { color: #f87171; font-size: 13px; margin: 0; }
+.agora-resend-error { color: #f87171; font-size: 13px; margin-left: 8px; }
 .scroll { max-height: 380px; overflow-y: auto; }
 /* Preserve newlines + wrap long unbroken strings so full bodies render. */
 .prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }

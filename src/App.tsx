@@ -1,4 +1,4 @@
-import { ReplykeProvider, ChatProvider } from "@agora-sdk/react-js";
+import { AgoraProvider, ChatProvider } from "@agora-sdk/react-js";
 import { setSecureChatDebug } from "@agora-sdk/secure-chat-core";
 import Shell from "./Shell";
 import SecureChatGate from "./secure/SecureChatGate";
@@ -22,18 +22,19 @@ if (!["", "false", "0", "off", "no"].includes(SECURE_CHAT_DEBUG)) {
   );
 }
 
-// ReplykeProvider wires the @agora SDK (Redux store, token persistence) to our project. The base URL +
-// project id come from ./config (runtime window.__AGORA__ → baked VITE_* fallback) and pass in via
-// `baseUrl` (the SDK no longer sniffs env). ChatProvider manages the socket.io connection (idle until
-// signed in).
+// AgoraProvider (the SDK's additive Agora*-aliased name for ReplykeProvider, divergence #7 — both
+// names still work) wires the @agora SDK (Redux store, token persistence) to our project. The base
+// URL + project id come from ./config (runtime window.__AGORA__ → baked VITE_* fallback) and pass in
+// via `baseUrl` (the SDK no longer sniffs env). ChatProvider manages the socket.io connection (idle
+// until signed in).
 export default function App() {
   return (
-    <ReplykeProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL}>
+    <AgoraProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL}>
       <ChatProvider>
         <SecureChatGate>
           <Shell />
         </SecureChatGate>
       </ChatProvider>
-    </ReplykeProvider>
+    </AgoraProvider>
   );
 }

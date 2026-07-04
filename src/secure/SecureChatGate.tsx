@@ -17,8 +17,8 @@ import { API_BASE_URL, PROJECT_ID } from "../config";
 // a SecureChatStore that also exposes unlock/lock/isLocked/changePassword.
 const createEncryptedStore = (secureReactJs as any).createEncryptedStore as (base: any) => any;
 
-// Sits inside ReplykeProvider: SecureChatProvider would otherwise resolve baseUrl/socketUrl from
-// @agora-sdk/core's runtime singletons (set by ReplykeProvider), but we pass them explicitly (same env
+// Sits inside AgoraProvider: SecureChatProvider would otherwise resolve baseUrl/socketUrl from
+// @agora-sdk/core's runtime singletons (set by AgoraProvider), but we pass them explicitly (same env
 // App.tsx parses) so the /secure REST + socket always have a URL even if the singletons aren't set yet.
 // crypto + store are built ONCE (stable identity) so the MLS state and IndexedDB handle survive
 // re-renders. The store is wrapped in createEncryptedStore so everything persisted to IndexedDB is

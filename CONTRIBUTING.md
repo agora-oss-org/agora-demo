@@ -39,7 +39,7 @@ This is a deliberately small, opinionated harness. New code should read like the
   drill-downs are local-state conditional renders.
 - **The SDK is a [Replyke](https://github.com/replyke/monorepo) fork** rescoped to `@agora-sdk/*`.
   Import from `@agora-sdk/react-js`, never `@replyke/*`. A few APIs diverge from upstream Replyke
-  docs (notably: pass `baseUrl` to `ReplykeProvider`; `signUpWithEmailAndPassword` returns a
+  docs (notably: pass `baseUrl` to `AgoraProvider`; `signUpWithEmailAndPassword` returns a
   `SignUpResult` union; the feed adds `decay`/`gravity`/`wilson`/`bayesian` ranking). When in doubt,
   the installed `.d.ts` under `node_modules/@agora-sdk/core/dist/esm/` is the source of truth.
 - **Hook returns are cast `as any`** on purpose — the SDK's exported types are incomplete and the

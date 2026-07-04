@@ -1,21 +1,25 @@
 import { useState } from "react";
-import { useAuth, useOAuthSignIn } from "@agora-sdk/react-js";
+import { useAuth, useRequestPasswordReset } from "@agora-sdk/react-js";
+import { ResendVerificationButton } from "@agora-sdk/auth-react-js";
 import { track } from "./analytics";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "./config";
 
-// Email/password against the Agora server's /auth/sign-in (Supabase-backed identity, Agora tokens),
-// plus GitHub OAuth via useOAuthSignIn (→ /oauth/authorize → Supabase-brokered → /oauth/callback,
-// which redirects back here with the minted tokens in the URL fragment; Shell picks them up).
+// Email/password only, against the Agora server's /auth/sign-in (Supabase-backed identity, Agora
+// tokens). Forgot-password uses the core useRequestPasswordReset hook to email a reset link; the link
+// itself lands on /auth/reset-password, handled by @agora-sdk/auth-react-js's PasswordResetHandler in
+// Shell.tsx. The same package's ResendVerificationButton covers "didn't get the confirmation email?".
 export default function Login() {
   const { signInWithEmailAndPassword, signUpWithEmailAndPassword } = useAuth();
-  const { initiateOAuth, isLoading: oauthBusy, error: oauthErr } = useOAuthSignIn() as any;
+  const requestPasswordReset = useRequestPasswordReset();
   const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState(DEMO_PASSWORD);
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Set after a sign-up that needs email confirmation — show "check your email" instead of an error.
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // Set after a successful forgot-password request — show "check your email" instead of the form.
+  const [resetSent, setResetSent] = useState(false);
 
   const submit = async () => {
     setBusy(true);
@@ -39,6 +43,19 @@ export default function Login() {
     }
   };
 
+  const submitReset = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await requestPasswordReset({ email });
+      setResetSent(true);
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || "Couldn't send the reset email");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // Post-sign-up confirmation screen.
   if (pendingEmail) {
     return (
@@ -48,6 +65,7 @@ export default function Login() {
           We sent a confirmation link to <code>{pendingEmail}</code>. Click it to activate your
           account (check spam too), then come back and sign in.
         </div>
+        <ResendVerificationButton email={pendingEmail} />
         <button
           className="primary"
           onClick={() => {
@@ -58,6 +76,44 @@ export default function Login() {
         >
           Back to sign in
         </button>
+      </div>
+    );
+  }
+
+  // Post-forgot-password confirmation screen.
+  if (resetSent) {
+    return (
+      <div className="panel login col">
+        <div className="brand">📬 Check your email</div>
+        <div className="muted">
+          If <code>{email}</code> has an account, we sent a password reset link to it. Click it to
+          set a new password, then come back and sign in.
+        </div>
+        <button
+          className="primary"
+          onClick={() => {
+            setResetSent(false);
+            setMode("in");
+            setErr(null);
+          }}
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === "reset") {
+    return (
+      <div className="panel login col">
+        <div className="brand">🏛️ Agora demo</div>
+        <div className="muted">Reset your password</div>
+        <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        {err && <div className="error">{err}</div>}
+        <button className="primary" disabled={busy || !email} onClick={submitReset}>
+          {busy ? "…" : "Send reset link"}
+        </button>
+        <button onClick={() => { setMode("in"); setErr(null); }}>Back to sign in</button>
       </div>
     );
   }
@@ -75,20 +131,11 @@ export default function Login() {
       <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setErr(null); }}>
         {mode === "in" ? "Need an account? Sign up" : "Have an account? Sign in"}
       </button>
-
-      <div className="row" style={{ margin: "4px 0" }}>
-        <span className="spacer" style={{ borderTop: "1px solid var(--border)" }} />
-        <span className="muted">or</span>
-        <span className="spacer" style={{ borderTop: "1px solid var(--border)" }} />
-      </div>
-      {oauthErr && <div className="error">{oauthErr}</div>}
-      {/* Redirect back to the demo's own origin; the Agora callback appends tokens to the fragment. */}
-      <button
-        disabled={oauthBusy}
-        onClick={() => initiateOAuth({ provider: "github", redirectAfterAuth: window.location.origin })}
-      >
-        {oauthBusy ? "Redirecting…" : "🐙 Continue with GitHub"}
-      </button>
+      {mode === "in" && (
+        <button className="linklike" onClick={() => { setMode("reset"); setErr(null); }}>
+          Forgot password?
+        </button>
+      )}
     </div>
   );
 }

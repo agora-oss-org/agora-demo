@@ -53,11 +53,11 @@ verification is manual; `tsc -b` in the build is the only static check.
 | Var | Purpose |
 |-----|---------|
 | `VITE_API_BASE_URL` | Agora server base URL (e.g. `http://localhost:4000/v7`) |
-| `VITE_PROJECT_ID` | Project id passed to `ReplykeProvider` |
+| `VITE_PROJECT_ID` | Project id passed to `AgoraProvider` |
 | `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` | Prefilled login credentials |
 | `VITE_ADMIN_URL` | *(optional)* Admin app URL; shows an **Admin** link in the header when set |
 
-`VITE_API_BASE_URL` is parsed in `App.tsx` and passed to `ReplykeProvider` via its `baseUrl` prop.
+`VITE_API_BASE_URL` is parsed in `App.tsx` and passed to `AgoraProvider` via its `baseUrl` prop.
 
 ## Docker
 
@@ -116,7 +116,7 @@ context / CI — keeping the image self-contained on the npm packages.
 
 ## Architecture
 
-`main.tsx` → `App.tsx` (`ReplykeProvider` with `projectId` + `baseUrl`, then `ChatProvider` for the
+`main.tsx` → `App.tsx` (`AgoraProvider` with `projectId` + `baseUrl`, then `ChatProvider` for the
 socket.io connection) → `Shell.tsx`. `Shell` is the auth gate and tab router; there's no router
 library — tabs and in-tab drill-downs are conditional renders driven by local state. Styling is one
 hand-written `styles.css` (utility-ish classes, no framework).

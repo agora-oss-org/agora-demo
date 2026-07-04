@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useAuth, useUser, useOAuthSignIn, useSignOutAll } from "@agora-sdk/react-js";
+import { useAuth, useUser } from "@agora-sdk/react-js";
+import { useAuthStatus, useSignOutEverywhere, useAuthSelfHeal, EmailVerificationHandler, PasswordResetHandler } from "@agora-sdk/auth-react-js";
 import * as secureChatCore from "@agora-sdk/secure-chat-core";
 import Login from "./Login";
 import useTokenRefresh from "./useTokenRefresh";
@@ -80,17 +81,34 @@ function clearDeepLinkFromUrl() {
   window.history.replaceState(null, "", url.pathname + url.search + url.hash);
 }
 
+// The server emails links to `{origin}/auth/verify-email` and `{origin}/auth/reset-password` (see
+// agora-sdk-plus's AUTH.md); this app has no router, so we match those two paths by hand — same
+// spirit as the ?entity= deep link above — and render the @agora-sdk/auth-react-js drop-in handlers
+// full-bleed instead of the normal tab UI. `endsWith` (not exact match) so this works whether the app
+// is mounted at `/` or under a path prefix like `/demo/`.
+function authRouteFromPath(): "verify-email" | "reset-password" | null {
+  const path = window.location.pathname;
+  if (path.endsWith("/auth/verify-email")) return "verify-email";
+  if (path.endsWith("/auth/reset-password")) return "reset-password";
+  return null;
+}
+
 export default function Shell() {
-  const { initialized, accessToken } = useAuth();
+  const { accessToken } = useAuth();
+  // @agora-sdk/auth-react-js's canonical auth-ready signal, replacing a hand-derived
+  // Boolean(accessToken && user) check.
+  const { status } = useAuthStatus();
   // Proactively rotate the access token before its 30-min TTL lapses (no-op until signed in).
   useTokenRefresh();
+  // Prunes a dead active account (a stored refresh token the server has since rotated away) once on
+  // mount, so a returning user with a stale-only session doesn't get stuck on a silent 401.
+  useAuthSelfHeal();
   const { user } = useUser();
-  const { handleOAuthCallback } = useOAuthSignIn();
-  // Full logout: clears ALL persisted accounts (clearAllAccounts), not just the active one. The
-  // active-account-only useAuth().signOut() takes the SDK's "switch to a remaining account" path
-  // when more than one account is stored, so it can't reliably end the session (and won't clear a
-  // corrupted/duplicate accounts map). signOutAll wipes the whole map and returns us to Login.
-  const { signOutAll } = useSignOutAll() as any;
+  // Full logout: clears ALL persisted accounts. The active-account-only useAuth().signOut() takes the
+  // SDK's "switch to a remaining account" path when more than one account is stored, so it can't
+  // reliably end the session (and won't clear a corrupted/duplicate accounts map).
+  // signOutEverywhere wipes the whole map and returns us to Login.
+  const { signOutEverywhere, isPending: signOutPending } = useSignOutEverywhere();
   // Secure chat encrypts its IndexedDB at rest, so its provider is mounted only once unlocked. Until
   // then the Chat tab shows the unlock prompt instead of SecureChat (whose hooks need the provider).
   // While locked, the Secure Chat tab shows the unlock prompt; once unlocked it swaps to SecureChat in
@@ -114,11 +132,8 @@ export default function Shell() {
   // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
   const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());
 
-  // On load, if we came back from an OAuth round-trip the Agora server appended the minted tokens to
-  // the URL fragment (#accessToken=…&refreshToken=…); pull them into the store + clean the URL.
-  // Then strip the deep-link query params so a refresh won't re-open the entity.
+  // Strip the deep-link query params on load so a refresh won't re-open the entity.
   useEffect(() => {
-    handleOAuthCallback();
     clearDeepLinkFromUrl();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -130,8 +145,33 @@ export default function Shell() {
     if (accessToken && !deepLink) trackPageView(TAB_TO_PATH[tab]);
   }, [tab, accessToken, deepLink]);
 
-  if (!initialized) return <div className="center muted">Loading session…</div>;
-  if (!accessToken) return <div className="center"><Login /></div>;
+  // The server's verify/reset emails land here regardless of session state (a fresh signup or a
+  // forgotten password both happen while signed out) — win over everything else, including the
+  // loading/login gate below.
+  const authRoute = authRouteFromPath();
+  if (authRoute === "verify-email") {
+    return (
+      <div className="center">
+        <div className="panel login col">
+          <div className="brand">🏛️ Agora demo</div>
+          <EmailVerificationHandler redirectTo="/" />
+        </div>
+      </div>
+    );
+  }
+  if (authRoute === "reset-password") {
+    return (
+      <div className="center">
+        <div className="panel login col">
+          <div className="brand">🏛️ Agora demo</div>
+          <PasswordResetHandler redirectTo="/?reset=1" />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "initializing") return <div className="center muted">Loading session…</div>;
+  if (status === "unauthenticated") return <div className="center"><Login /></div>;
 
   // A deep link wins over the tab UI: render the targeted entity full-bleed, with a back button
   // that drops us onto the Feed tab. The reported comment (if any) is scrolled to + highlighted.
@@ -153,7 +193,7 @@ export default function Shell() {
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}
           </button>
-          <button onClick={() => { track("logout"); signOutAll(); }}>Sign out</button>
+          <button disabled={signOutPending} onClick={() => { track("logout"); void signOutEverywhere().catch(() => {}); }}>Sign out</button>
           {ADMIN_URL && isOperatorToken(accessToken) && (
             <button onClick={() => window.open(ADMIN_URL, "_blank", "noopener,noreferrer")} title="Open the admin app in a new tab">
               🛠️ Admin
@@ -196,7 +236,7 @@ export default function Shell() {
   // Provide the public-profile overlay above everything (deep link + tabs), so any AuthorTag can
   // open a profile. "Edit profile →" on your own profile drops the overlay and jumps to the Me tab.
   return (
-    <SocialProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL} accessToken={accessToken}>
+    <SocialProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL} accessToken={accessToken ?? undefined}>
       <ProfileViewerProvider
         currentUserId={user?.id}
         onEditOwnProfile={() => { setDeepLink(null); setTab("profile"); }}

@@ -84,6 +84,21 @@ const socialAlias: Record<string, string> = useLocalSocial
     }
   : {};
 
+// Auth SDK (agora-sdk-plus) local-fork override — same on-disk-guarded mechanism as the secure-chat
+// and social blocks above, but a single package. When the sibling agora-sdk-plus/packages/auth
+// workspace is present AND built (dist/esm exists) we alias the package name at its dist so local
+// edits take effect without republishing; OFF automatically when the sibling isn't present (Docker/CI
+// build context is the demo dir only → npm package used).
+const authReactJsEsm = fileURLToPath(
+  new URL("../agora-sdk-plus/packages/auth/react-js/dist/esm/index.js", import.meta.url),
+);
+const useLocalAuth = existsSync(authReactJsEsm);
+if (useLocalAuth) {
+  // eslint-disable-next-line no-console
+  console.log("[vite] @agora-sdk/auth-react-js → LOCAL workspace (dist/esm). Rebuild the fork after edits.");
+}
+const authAlias: Record<string, string> = useLocalAuth ? { "@agora-sdk/auth-react-js": authReactJsEsm } : {};
+
 export default defineConfig({
   // Relative base so the SAME built bundle works mounted at ANY path: the public demo at root (/) AND
   // the self-host compose at /demo/ (Caddy's handle_path strips the prefix). Asset refs become ./assets/…
@@ -110,7 +125,7 @@ export default defineConfig({
     allowedHosts: [".intra.recoverysky.net"],
   },
   resolve: {
-    alias: { ...sdkAlias, ...secureAlias, ...socialAlias },
+    alias: { ...sdkAlias, ...secureAlias, ...socialAlias, ...authAlias },
     dedupe: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"],
   },
   build: {
@@ -132,6 +147,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
+      "@agora-sdk/auth-react-js",
       "@agora-sdk/core",
       "@agora-sdk/react-js",
       "@agora-sdk/social-core",
