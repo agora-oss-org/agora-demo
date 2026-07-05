@@ -150,7 +150,10 @@ tab (entity detail, space detail, create forms), are all conditional renders swa
   router, `Shell.tsx` hand-matches `window.location.pathname` for those two suffixes (same spirit as
   the `?entity=` deep link) and renders `@agora-sdk/auth-react-js`'s `EmailVerificationHandler` /
   `PasswordResetHandler` full-bleed instead of the normal gate/tab UI — before the loading/login
-  check, since both can land while signed out.
+  check, since both can land while signed out. These are the **only** two URLs in the app that get a
+  real full-page browser navigation at a non-root depth (every other "route" is client-side tab
+  state) — see the `base: "./"` comment in `vite.config.ts` for why that used to break asset loading
+  there, and `index.html`'s `<base href>` for the fix.
 
 Each feature file maps to one SDK surface (and the server route it hits, noted in each file's
 header comment):

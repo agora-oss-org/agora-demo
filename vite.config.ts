@@ -102,8 +102,14 @@ const authAlias: Record<string, string> = useLocalAuth ? { "@agora-sdk/auth-reac
 export default defineConfig({
   // Relative base so the SAME built bundle works mounted at ANY path: the public demo at root (/) AND
   // the self-host compose at /demo/ (Caddy's handle_path strips the prefix). Asset refs become ./assets/…
-  // resolved against the document URL. Safe here because the demo has no history-API router (tabs are
-  // local state; deep links ride ?entity= on /), which is the one case relative base can't handle.
+  // resolved against the CURRENT DOCUMENT URL, not the app's root — fine for every in-app "route" (tabs
+  // are local state, ?entity= deep links ride the query string on /, never a real navigation), but
+  // wrong for the two pages that DO get a real full-page browser navigation at a non-root depth: the
+  // emailed /auth/verify-email and /auth/reset-password links. Landing there resolved "./assets/x.js"
+  // against e.g. "/auth/" and 404'd into nginx's SPA fallback (text/html, not JS) — a blank page. Fixed
+  // by index.html's <base href>, rewritten from the actual mount prefix at container start (see
+  // docker-entrypoint.d/40-agora-config.sh + AGORA_DEMO_BASE_PATH), which anchors relative resolution
+  // to the app's true root regardless of which URL depth the browser is actually sitting at.
   base: "./",
   plugins: [react()],
   server: {

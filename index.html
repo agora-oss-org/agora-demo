@@ -2,6 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Anchors relative URL resolution (asset src/href AND the ?entity=/auth/* full-page-load
+         routes) to the app's true mount root, regardless of the CURRENT document URL's depth. Without
+         this, a real browser navigation to a non-root path (only /auth/verify-email and
+         /auth/reset-password ever are — every other "route" here is client-side tab state, never a
+         real page load) resolves "./assets/x.js" against that path's directory instead of root, and
+         gets nginx's SPA-fallback index.html back for every asset request (200 text/html, not JS) —
+         hence a blank page and "Unexpected token '<'". The container's nginx entrypoint rewrites this
+         href from AGORA_DEMO_BASE_PATH (default "/"; self-hosted mounts under a path prefix set it to
+         that prefix, e.g. "/demo/") — in `pnpm dev` it stays "/", matching the dev server's own root
+         serving. Must stay the base's default value here too, so a dev build/preview without the
+         entrypoint still resolves correctly. -->
+    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agora Demo</title>
   </head>

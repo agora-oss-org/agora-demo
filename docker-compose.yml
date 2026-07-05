@@ -37,6 +37,10 @@ services:
       VITE_AGORA_UMAMI_URL: ${AGORA_DEMO_UMAMI_URL:-}
       VITE_AGORA_UMAMI_DEMO_ID: ${AGORA_DEMO_UMAMI_ID:-}
       VITE_AGORA_EMAIL_REDIRECT_TO: ${AGORA_DEMO_EMAIL_REDIRECT_TO:-}
+      # No VITE_* translation — this rewrites index.html's <base href> in the prod nginx entrypoint
+      # only; the dev server has no equivalent (it's always effectively at root). Passed through
+      # under its own name purely so .env's AGORA_DEMO_* set stays fully represented here.
+      AGORA_DEMO_BASE_PATH: ${AGORA_DEMO_BASE_PATH:-}
     volumes:
       - .:/app
       - /app/node_modules

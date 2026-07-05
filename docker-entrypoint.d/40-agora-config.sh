@@ -23,6 +23,22 @@ set -eu
 # public origin (empty is also fine: the SDK falls back to window.location.origin, which is only
 # wrong when mounted under a path prefix).
 : "${AGORA_DEMO_EMAIL_REDIRECT_TO:=https://demo.agora-oss.org}"
+# Mount path this container is actually served under. The built bundle uses a RELATIVE Vite asset
+# base ("./assets/…") so it works at any mount depth, but that only resolves correctly against the
+# CURRENT document URL's directory — fine for every in-app "route" (client-side tab state, never a
+# real navigation) except /auth/verify-email and /auth/reset-password, the two pages a real browser
+# navigation (an emailed link) can land on directly. nginx's SPA fallback serves index.html's bytes
+# at that deeper URL without changing it, so "./assets/x.js" resolved against e.g. "/auth/" 404s into
+# the fallback again (text/html, not JS) — hence a blank page. The <base href> in index.html fixes
+# this by anchoring ALL relative resolution to the app's true root instead of the current URL's
+# depth; rewrite it here from the actual mount prefix. Default "/" for the public root demo; a
+# self-hosted deployment behind a path-stripping proxy (e.g. Caddy handle_path at /demo/) sets this
+# to that same prefix. Always normalized to exactly one trailing slash — a bare "/demo" would make
+# the browser treat "demo" as a file and drop it when resolving "./assets/x.js", right back to the
+# original bug.
+: "${AGORA_DEMO_BASE_PATH:=/}"
+AGORA_DEMO_BASE_PATH="${AGORA_DEMO_BASE_PATH%/}/"
+sed -i "s#<base href=\"/\" />#<base href=\"${AGORA_DEMO_BASE_PATH}\" />#" /usr/share/nginx/html/index.html
 
 cat > /usr/share/nginx/html/config.js <<EOF
 window.__AGORA__ = {
