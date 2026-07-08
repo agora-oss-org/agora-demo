@@ -618,7 +618,7 @@ function CommentRow({
 
 function Comments({ entityId, highlightCommentId, onPosted }: { entityId: string; highlightCommentId?: string; onPosted?: () => void }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
-  const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore } = cs;
+  const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore, sortBy, setSortBy, sortDir, setSortDir } = cs;
   const { user } = useUser() as any;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -643,9 +643,36 @@ function Comments({ entityId, highlightCommentId, onPosted }: { entityId: string
   // A deep-linked comment may sit beyond the first page; tell the moderator to page in if so.
   const highlightLoaded = !highlightCommentId || all.some((c: any) => c.id === highlightCommentId);
 
+  const COMMENT_SORTS = ["createdAt", "top", "controversial"] as const;
+
   return (
     <div className="panel col">
-      <strong>Comments {loading ? "…" : `(${all.length})`}</strong>
+      <div className="row">
+        <strong>Comments {loading ? "…" : `(${all.length})`}</strong>
+        <span className="spacer" />
+        <label className="muted">sort</label>
+        <select
+          value={sortBy ?? "createdAt"}
+          onChange={(e) => {
+            const next = e.target.value as (typeof COMMENT_SORTS)[number];
+            setSortBy(next);
+            track("change_comment_sort", { sortBy: next, sortDir });
+          }}
+          style={{ width: "auto" }}
+        >
+          {COMMENT_SORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button
+          disabled={sortBy !== "createdAt"}
+          onClick={() => {
+            const next = sortDir === "asc" ? "desc" : "asc";
+            setSortDir(next);
+            track("change_comment_sort", { sortBy: sortBy ?? "createdAt", sortDir: next });
+          }}
+        >
+          {sortDir === "asc" ? "▲ asc" : "▼ desc"}
+        </button>
+      </div>
       {!loading && !highlightLoaded && (
         <div className="muted">
           🔗 The linked comment isn’t on this page yet — keep loading more to reach it.
