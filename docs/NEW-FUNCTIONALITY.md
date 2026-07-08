@@ -12,7 +12,7 @@ These are "free" — no server work needed, purely wiring up existing hooks in t
 | # | Feature | SDK hook(s) | Notes / where it'd live |
 |---|---|---|---|
 | A1 | **Events** (full feature) | `useCreateEvent`, `useFetchManyEvents`, `useFetchEvent`, `useUpdateEvent`, `useDeleteEvent`, `useCancelEvent`, `useSetRsvp`/`useWithdrawRsvp`, `useFetchEventRsvps`, `useAddInvite`/`useRemoveInvite`/`useFetchInvitees`, `useAddHost`/`useRemoveHost` | Biggest gap — no `Events.tsx` at all. Needs its own top-level tab (list/create/detail, RSVP, invites, co-hosts, inline cover/gallery image upload like `CreateEntity.tsx`/`EntityView.tsx` already do) |
-| A2 | **Push device registration** | `usePushRegistration`, `webPushTokenAdapter` | No push registration anywhere in the demo. Natural home: a settings-ish corner of `Me.tsx`/`Notifications.tsx` — register this browser for web push, show registration status |
+| ~~A2~~ | ~~Push device registration~~ | `usePushRegistration`, `webPushTokenAdapter` | **Done** (2026-07-07, `docs/superpowers/specs/2026-07-07-push-registration-design.md`) — new `src/Push.tsx` panel under a `Me.tsx` "🔔 Push" sub-tab; `public/sw.js` service worker + boot-time registration in `main.tsx` (required since `webPushTokenAdapter` awaits `navigator.serviceWorker.ready`, and the demo had no SW infra) |
 | ~~A3~~ | ~~Entity `createdAt` sort~~ | `sortBy=createdAt` on `useEntityList` | **Done** (2026-07-07, `docs/superpowers/specs/2026-07-07-sort-controls-design.md`) — `Feed.tsx` `SORTS` now offers canonical `createdAt` instead of the deprecated `new` alias |
 | ~~A4~~ | ~~Comment sort controls~~ | `sortBy`/`sortDir` on `useCommentSectionData` | **Done** (2026-07-07, same spec) — `EntityView.tsx`'s comment section now has a sort dropdown (`createdAt`/`top`/`controversial`) + direction toggle |
 | ~~A5~~ | ~~Live conversation list~~ | `useFetchConversationPreview`, `conversation:created` socket event | **No demo work needed** — investigated 2026-07-08 by reading the SDK source directly: `ChatProvider` (already wrapping the app in `App.tsx`) listens for `conversation:created` itself (`context/chat-context.js:359`) and dispatches `insertConversationPreview` into the same Redux slice (`store/slices/chatSlice.js:133`) that `useConversations` reads via `selectConversationList` (`hooks/chat/conversations/useConversations.js:11`). `Chat.tsx` already uses both `ChatProvider` and `useConversations` — the live-list behavior is automatic, no explicit wiring required. (Note: the socket handler inserts unconditionally, ignoring the `types` filter passed to `useConversations` — but `Chat.tsx` already requests all three existing types (`direct`/`group`/`space`), so this never surfaces as a bug here. Not live-tested with two clients, but the source trace is unambiguous.) |
@@ -38,8 +38,8 @@ notes it's safe to build these incrementally since an old server + new SDK degra
 
 1. ~~A3, A4~~ — done
 2. ~~A5~~ — investigated, no demo work needed (already works via existing `ChatProvider`/`useConversations` usage)
-3. **A2 (Push registration)** — moderate, new hook + browser permission flow — up next
-4. **A1 (Events)** — the single biggest net-new surface; needs a new tab + create/detail flow
+3. ~~A2 (Push registration)~~ — done
+4. **A1 (Events)** — the single biggest net-new surface; needs a new tab + create/detail flow — up next
 5. Group B items **as their server-side lands**, in the spec's recommended order (B1 → B2 → B3 → B4 → B5, then B6/B7)
 
 ## Confirmed against installed SDK (1.8.0)
