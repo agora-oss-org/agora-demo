@@ -11,7 +11,7 @@ These are "free" — no server work needed, purely wiring up existing hooks in t
 
 | # | Feature | SDK hook(s) | Notes / where it'd live |
 |---|---|---|---|
-| A1 | **Events** (full feature) | `useCreateEvent`, `useFetchManyEvents`, `useFetchEvent`, `useUpdateEvent`, `useDeleteEvent`, `useCancelEvent`, `useSetRsvp`/`useWithdrawRsvp`, `useFetchEventRsvps`, `useAddInvite`/`useRemoveInvite`/`useFetchInvitees`, `useAddHost`/`useRemoveHost` | Biggest gap — no `Events.tsx` at all. Needs its own top-level tab (list/create/detail, RSVP, invites, co-hosts, inline cover/gallery image upload like `CreateEntity.tsx`/`EntityView.tsx` already do) |
+| ~~A1~~ | ~~Events~~ (full feature) | `useCreateEvent`, `useFetchManyEvents`, `useFetchEvent`, `useUpdateEvent`, `useDeleteEvent`, `useCancelEvent`, `useSetRsvp`/`useWithdrawRsvp`, `useFetchEventRsvps`, `useAddInvite`/`useRemoveInvite`/`useFetchInvitees`, `useAddHost`/`useRemoveHost` | **Done** (2026-07-08, `docs/superpowers/specs/2026-07-08-events-design.md` + `docs/superpowers/plans/2026-07-08-events.md`) — new `🎉 Events` top-level tab (`src/Events.tsx`, `src/CreateEvent.tsx`, `src/EventView.tsx`, `src/EventGuests.tsx`): browse/filter, create with cover+gallery upload, RSVP, host-only edit/cancel/delete, co-host + invite management, guest lists. Manual live-verified against a running local server: RSVP, edit, cancel, delete, co-host/invite add-remove, filters, and non-host/invite-only visibility all confirmed working. Caught and fixed a critical infinite-refetch loop (unstable `include` array identity feeding `useFetchManyEventsWrapper`) during verification. **Known non-demo gap**: the server's `buildEventResponse` only implements `include=user`/`userRsvp` — `include=space`/`include=files` are silently ignored, so cover/gallery images upload successfully but never render, and space pills never show on events; would need an `agora-server` fix, out of scope for this repo |
 | ~~A2~~ | ~~Push device registration~~ | `usePushRegistration`, `webPushTokenAdapter` | **Done** (2026-07-07, `docs/superpowers/specs/2026-07-07-push-registration-design.md`) — new `src/Push.tsx` panel under a `Me.tsx` "🔔 Push" sub-tab; `public/sw.js` service worker + boot-time registration in `main.tsx` (required since `webPushTokenAdapter` awaits `navigator.serviceWorker.ready`, and the demo had no SW infra) |
 | ~~A3~~ | ~~Entity `createdAt` sort~~ | `sortBy=createdAt` on `useEntityList` | **Done** (2026-07-07, `docs/superpowers/specs/2026-07-07-sort-controls-design.md`) — `Feed.tsx` `SORTS` now offers canonical `createdAt` instead of the deprecated `new` alias |
 | ~~A4~~ | ~~Comment sort controls~~ | `sortBy`/`sortDir` on `useCommentSectionData` | **Done** (2026-07-07, same spec) — `EntityView.tsx`'s comment section now has a sort dropdown (`createdAt`/`top`/`controversial`) + direction toggle |
@@ -39,8 +39,8 @@ notes it's safe to build these incrementally since an old server + new SDK degra
 1. ~~A3, A4~~ — done
 2. ~~A5~~ — investigated, no demo work needed (already works via existing `ChatProvider`/`useConversations` usage)
 3. ~~A2 (Push registration)~~ — done
-4. **A1 (Events)** — the single biggest net-new surface; needs a new tab + create/detail flow — up next
-5. Group B items **as their server-side lands**, in the spec's recommended order (B1 → B2 → B3 → B4 → B5, then B6/B7)
+4. ~~A1 (Events)~~ — done
+5. Group B items **as their server-side lands**, in the spec's recommended order (B1 → B2 → B3 → B4 → B5, then B6/B7) — up next
 
 ## Confirmed against installed SDK (1.8.0)
 
