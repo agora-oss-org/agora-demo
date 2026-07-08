@@ -30,20 +30,22 @@ function UserPicker({ onPick, excludeUserIds }: { onPick: (userId: string) => vo
       setUuidError(null);
       return;
     }
+    let alive = true;
     if (UUID_RE.test(query.trim())) {
       setShowResults(false);
       search.reset?.();
       setUuidLoading(true);
       setUuidError(null);
       fetchUser({ userId: q }).then((u: any) => {
+        if (!alive) return;
         setUuidLoading(false);
         if (u) { onPick(u.id); setQuery(""); } else { setUuidError("user not found"); }
-      }).catch(() => { setUuidLoading(false); setUuidError("user not found"); });
-      return;
+      }).catch(() => { if (!alive) return; setUuidLoading(false); setUuidError("user not found"); });
+      return () => { alive = false; };
     }
     setUuidError(null);
     const t = setTimeout(() => { search.search({ query: q, limit: 8 }); setShowResults(true); }, 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
