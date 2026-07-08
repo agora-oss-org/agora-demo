@@ -7,7 +7,7 @@ import { useModerationRefresh } from "./useModerationRefresh";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
 // ranking algorithm per request (hot/decay/gravity/…).
-const SORTS = ["hot", "top", "new", "controversial", "decay", "gravity", "wilson", "bayesian"];
+const SORTS = ["hot", "top", "createdAt", "controversial", "decay", "gravity", "wilson", "bayesian"];
 
 export default function Feed() {
   const list = useEntityList({ listId: "demo-feed" }) as any;
