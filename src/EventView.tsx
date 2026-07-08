@@ -5,6 +5,7 @@ import EventGuests from "./EventGuests";
 import { track, trackPageView, PATHS } from "./analytics";
 
 export const TYPE_ICON: Record<string, string> = { online: "💻", physical: "📍", hybrid: "🌐" };
+const EVENT_INCLUDE: string[] = ["user", "space", "files", "userRsvp"];
 
 // datetime-local input value ⇄ ISO string. datetime-local has no timezone info (it's "local wall
 // time"), so this is a plain local Date round-trip — the separate `timezone` field is just an
@@ -46,7 +47,7 @@ export default function EventView({
   backLabel?: string;
 }) {
   useEffect(() => { trackPageView(PATHS.event); }, []);
-  const providerProps = { eventId, include: ["user", "space", "files", "userRsvp"] } as any;
+  const providerProps = { eventId, include: EVENT_INCLUDE } as any;
   return (
     <EventProvider {...providerProps}>
       <Inner eventId={eventId} onBack={onBack} backLabel={backLabel} />

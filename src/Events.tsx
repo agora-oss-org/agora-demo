@@ -7,6 +7,7 @@ import { track } from "./analytics";
 
 const TIME_WINDOWS = ["upcoming", "ongoing", "past", "all"] as const;
 const SORTS = ["startTime", "going"] as const;
+const EVENT_INCLUDE: string[] = ["user", "space", "files", "userRsvp"];
 
 // Browses events via useFetchManyEventsWrapper (→ GET /v7/:project/events), a self-contained
 // paginated hook (unlike useEntityList, it needs no manual fetch call — changing its filter props
@@ -19,7 +20,7 @@ export default function Events() {
   const [creating, setCreating] = useState(false);
 
   const list = useFetchManyEventsWrapper({
-    include: ["user", "space", "files", "userRsvp"],
+    include: EVENT_INCLUDE,
     timeWindow: timeWindow === "all" ? null : timeWindow,
     hostId: hostedByMe && user?.id ? user.id : null,
     defaultSortBy: "startTime",
