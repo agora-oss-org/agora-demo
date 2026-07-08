@@ -17,16 +17,18 @@ import Spaces from "./Spaces";
 import Notifications from "./Notifications";
 import Me from "./Me";
 import Social from "./Social";
+import Events from "./Events";
 import { SocialProvider } from "@agora-sdk/social-core";
 import { API_BASE_URL, PROJECT_ID, ADMIN_URL } from "./config";
 
-type Tab = "feed" | "spaces" | "search" | "chat" | "secure" | "social" | "notifications" | "profile";
+type Tab = "feed" | "spaces" | "events" | "search" | "chat" | "secure" | "social" | "notifications" | "profile";
 // Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
 // report). Two ids don't match their path: notifications→/inbox, profile→/me. Connections is no
 // longer a top-level tab — it lives under Me (records /connections from there).
 const TAB_TO_PATH: Record<Tab, string> = {
   feed: PATHS.feed,
   spaces: PATHS.spaces,
+  events: PATHS.events,
   search: PATHS.search,
   chat: PATHS.chat,
   secure: PATHS.secure,
@@ -37,6 +39,7 @@ const TAB_TO_PATH: Record<Tab, string> = {
 const TABS: { id: Tab; label: string }[] = [
   { id: "feed", label: "📰 Feed" },
   { id: "spaces", label: "🏘️ Spaces" },
+  { id: "events", label: "🎉 Events" },
   { id: "search", label: "🔍 Search" },
   { id: "chat", label: "💬 Chat" },
   { id: "secure", label: "🔒 Secure Chat" },
@@ -123,7 +126,7 @@ export default function Shell() {
   // this); other tabs ignore it.
   const [rootKey, setRootKey] = useState<Partial<Record<Tab, number>>>({});
   const selectTab = (id: Tab) => {
-    if (id === tab && (id === "feed" || id === "spaces")) {
+    if (id === tab && (id === "feed" || id === "spaces" || id === "events")) {
       setRootKey((k) => ({ ...k, [id]: (k[id] ?? 0) + 1 }));
     }
     setTab(id);
@@ -212,6 +215,7 @@ export default function Shell() {
 
       {tab === "feed" && <Feed key={`feed-${rootKey.feed ?? 0}`} />}
       {tab === "spaces" && <Spaces key={`spaces-${rootKey.spaces ?? 0}`} />}
+      {tab === "events" && <Events key={`events-${rootKey.events ?? 0}`} />}
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
       {tab === "secure" && (unlocked ? <SecureChat /> : <SecureUnlock />)}
