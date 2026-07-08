@@ -13,19 +13,35 @@ const RSVP_STATUSES = ["all", "going", "maybe", "not_going"] as const;
 // Debounced username/name typeahead — a verbatim adaptation of Connections.tsx's pattern, kept as
 // its own local copy rather than extracted into a shared component (avoids an unrelated refactor
 // of Connections.tsx for this feature). Resolves to a picked user id.
-function UserPicker({ onPick, excludeUserId }: { onPick: (userId: string) => void; excludeUserId?: string }) {
+function UserPicker({ onPick, excludeUserIds }: { onPick: (userId: string) => void; excludeUserIds?: string[] }) {
   const search = useSearchUsers() as any;
+  const fetchUser = useFetchUser() as any;
   const { user: me } = useUser() as any;
   const [query, setQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [uuidLoading, setUuidLoading] = useState(false);
+  const [uuidError, setUuidError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query.trim().replace(/^@/, "");
-    if (q.length < 1 || UUID_RE.test(query.trim())) {
+    if (q.length < 1) {
       search.reset?.();
       setShowResults(false);
+      setUuidError(null);
       return;
     }
+    if (UUID_RE.test(query.trim())) {
+      setShowResults(false);
+      search.reset?.();
+      setUuidLoading(true);
+      setUuidError(null);
+      fetchUser({ userId: q }).then((u: any) => {
+        setUuidLoading(false);
+        if (u) { onPick(u.id); setQuery(""); } else { setUuidError("user not found"); }
+      }).catch(() => { setUuidLoading(false); setUuidError("user not found"); });
+      return;
+    }
+    setUuidError(null);
     const t = setTimeout(() => { search.search({ query: q, limit: 8 }); setShowResults(true); }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,21 +57,27 @@ function UserPicker({ onPick, excludeUserId }: { onPick: (userId: string) => voi
   return (
     <div className="col" style={{ gap: 4 }}>
       <input placeholder="@username or user id" value={query} onChange={(e) => setQuery(e.target.value)} />
-      {showResults && (
+      {(showResults || uuidLoading || uuidError) && (
         <div className="col" style={{ gap: 4 }}>
-          {search.loading && <div className="muted">searching…</div>}
-          {!search.loading && (search.results?.length ?? 0) === 0 && <div className="muted">no users match</div>}
-          {(search.results ?? [])
-            .map((r: any) => r.record)
-            .filter((u: any) => u && u.id !== me?.id && u.id !== excludeUserId)
-            .map((u: any) => (
-              <div key={u.id} className="card row" style={{ cursor: "pointer", marginBottom: 0 }} onClick={() => pick(u)}>
-                <span>@{u.username || u.id.slice(0, 8)}</span>
-                {u.name && <span className="muted">{u.name}</span>}
-                <span className="spacer" />
-                <span className="muted">select →</span>
-              </div>
-            ))}
+          {uuidLoading && <div className="muted">resolving user…</div>}
+          {uuidError && <div className="muted error">{uuidError}</div>}
+          {showResults && (
+            <>
+              {search.loading && <div className="muted">searching…</div>}
+              {!search.loading && (search.results?.length ?? 0) === 0 && <div className="muted">no users match</div>}
+              {(search.results ?? [])
+                .map((r: any) => r.record)
+                .filter((u: any) => u && u.id !== me?.id && !excludeUserIds?.includes(u.id))
+                .map((u: any) => (
+                  <div key={u.id} className="card row" style={{ cursor: "pointer", marginBottom: 0 }} onClick={() => pick(u)}>
+                    <span>@{u.username || u.id.slice(0, 8)}</span>
+                    {u.name && <span className="muted">{u.name}</span>}
+                    <span className="spacer" />
+                    <span className="muted">select →</span>
+                  </div>
+                ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -170,7 +192,7 @@ export default function EventGuests({
           <HostRow key={id} userId={id} canRemove={hostIds.length > 1} onRemove={() => doRemoveHost(id)} />
         ))}
         <label className="muted">add a co-host</label>
-        <UserPicker onPick={doAddHost} />
+        <UserPicker onPick={doAddHost} excludeUserIds={hostIds} />
         {hostError && <div className="error">{hostError}</div>}
       </div>
 
@@ -185,7 +207,7 @@ export default function EventGuests({
         ))}
         {invitees.length === 0 && <div className="muted">none yet</div>}
         <label className="muted">invite someone</label>
-        <UserPicker onPick={doAddInvite} />
+        <UserPicker onPick={doAddInvite} excludeUserIds={invitees.map((inv) => inv.userId)} />
         {inviteError && <div className="error">{inviteError}</div>}
       </div>
 
