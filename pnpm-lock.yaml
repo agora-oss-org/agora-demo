@@ -10,13 +10,13 @@ importers:
     dependencies:
       '@agora-sdk/auth-react-js':
         specifier: ^0.10.2
-        version: 0.10.2(@agora-sdk/react-js@1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 0.10.2(@agora-sdk/react-js@1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@agora-sdk/core':
-        specifier: ^1.7.0
-        version: 1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+        specifier: ^1.8.0
+        version: 1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@agora-sdk/react-js':
-        specifier: ^1.7.0
-        version: 1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+        specifier: ^1.8.0
+        version: 1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@agora-sdk/secure-chat-core':
         specifier: ^0.10.2
         version: 0.10.2(react@18.3.1)
@@ -83,15 +83,15 @@ packages:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
 
-  '@agora-sdk/core@1.7.0':
-    resolution: {integrity: sha512-ubqwbawsAe6AUe0XmVYDYOtGqvC+XlEQGL2a6g3DJIdHTM8GGoui1+Xr6yvzT2NI3wLWj8XoxQLoLTKbb2KUCA==}
+  '@agora-sdk/core@1.8.0':
+    resolution: {integrity: sha512-N9LrWXm1e05UgAbv0F3Z1T9egZiCyv4PmLBWv0aoYtVy/5aAWh9+W6QWDovHmyyfUCc2XotSaXXDupiUJr2Rcg==}
     peerDependencies:
       '@reduxjs/toolkit': ^2.0.0
       react: ^18.0.0 || ^19.0.0
       react-redux: ^9.0.0
 
-  '@agora-sdk/react-js@1.7.0':
-    resolution: {integrity: sha512-tOTcSNbzv89tEtDYztQUVkncqL8Q4dZxUjO2VDf5DGeW2kSjZQZJVrW5rT7AHueNBCJijoZZSIUNOF3kRpO1jg==}
+  '@agora-sdk/react-js@1.8.0':
+    resolution: {integrity: sha512-b51sfRcsSsXf6Y9rbLZAJX7ErStRi0p9CJPLTEactkPakBmzCkyy5nZZic+bCPzyo/Ehq6GGkBrqAUXAHWjbOw==}
     peerDependencies:
       '@reduxjs/toolkit': ^2.0.0
       '@types/react': ^18.0.0 || ^19.0.0
@@ -1003,14 +1003,14 @@ packages:
 
 snapshots:
 
-  '@agora-sdk/auth-react-js@0.10.2(@agora-sdk/react-js@1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@agora-sdk/auth-react-js@0.10.2(@agora-sdk/react-js@1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@agora-sdk/react-js': 1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+      '@agora-sdk/react-js': 1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@types/react': 18.3.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@agora-sdk/core@1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)':
+  '@agora-sdk/core@1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)':
     dependencies:
       '@reduxjs/toolkit': 2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       axios: 1.18.1
@@ -1025,9 +1025,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@agora-sdk/react-js@1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)':
+  '@agora-sdk/react-js@1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)':
     dependencies:
-      '@agora-sdk/core': 1.7.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
+      '@agora-sdk/core': 1.8.0(@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1))(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@reduxjs/toolkit': 2.12.0(react-redux@9.3.0(@types/react@18.3.31)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@types/react': 18.3.31
       react: 18.3.1
