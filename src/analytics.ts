@@ -46,13 +46,19 @@ export type AnalyticsEvent =
   // social graph (read-only lenses) — metadata: { lens: "weather"|"constellation"|"neighborhood" } or { on: boolean }
   | "social_lens_rendered" | "social_interactions_toggled" | "social_refreshed"
   // push notifications — no metadata, zero-argument success events
-  | "push_register" | "push_unregister";
+  | "push_register" | "push_unregister"
+  // events — metadata: create_event { type, visibility, hasCover, hasGallery, hasSpace },
+  // change_event_filter { timeWindow, sortBy, sortDir }, set_rsvp { status }; the rest (edit/
+  // cancel/delete/withdraw/host/invite) fire with no metadata
+  | "create_event" | "edit_event" | "cancel_event" | "delete_event" | "change_event_filter"
+  | "set_rsvp" | "withdraw_rsvp" | "add_host" | "remove_host" | "add_invite" | "remove_invite";
 
 // Virtual page-view paths for the no-router SPA — tabs + drill-down details. Centralized so Shell
 // and the detail views share one set of names (Umami's "Pages" report keys off these).
 export const PATHS = {
   feed: "/feed",
   spaces: "/spaces",
+  events: "/events",
   search: "/search",
   chat: "/chat",
   secure: "/secure",
@@ -63,6 +69,7 @@ export const PATHS = {
   inbox: "/inbox",
   me: "/me",
   entity: "/entity",
+  event: "/event",
   space: "/space",
   conversation: "/conversation",
   user: "/user",
