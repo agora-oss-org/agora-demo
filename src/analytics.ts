@@ -47,6 +47,8 @@ export type AnalyticsEvent =
   | "social_lens_rendered" | "social_interactions_toggled" | "social_refreshed"
   // push notifications — no metadata, zero-argument success events
   | "push_register" | "push_unregister"
+  // notification preferences — metadata: { state: "all-on" | "partial" | "all-off" }
+  | "set_notification_prefs"
   // events — metadata: create_event { type, visibility, hasCover, hasGallery, hasSpace },
   // change_event_filter { timeWindow, sortBy, sortDir }, set_rsvp { status }; the rest (edit/
   // cancel/delete/withdraw/host/invite) fire with no metadata
