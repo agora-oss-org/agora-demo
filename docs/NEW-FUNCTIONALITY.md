@@ -17,22 +17,29 @@ These are "free" — no server work needed, purely wiring up existing hooks in t
 | ~~A4~~ | ~~Comment sort controls~~ | `sortBy`/`sortDir` on `useCommentSectionData` | **Done** (2026-07-07, same spec) — `EntityView.tsx`'s comment section now has a sort dropdown (`createdAt`/`top`/`controversial`) + direction toggle |
 | ~~A5~~ | ~~Live conversation list~~ | `useFetchConversationPreview`, `conversation:created` socket event | **No demo work needed** — investigated 2026-07-08 by reading the SDK source directly: `ChatProvider` (already wrapping the app in `App.tsx`) listens for `conversation:created` itself (`context/chat-context.js:359`) and dispatches `insertConversationPreview` into the same Redux slice (`store/slices/chatSlice.js:133`) that `useConversations` reads via `selectConversationList` (`hooks/chat/conversations/useConversations.js:11`). `Chat.tsx` already uses both `ChatProvider` and `useConversations` — the live-list behavior is automatic, no explicit wiring required. (Note: the socket handler inserts unconditionally, ignoring the `types` filter passed to `useConversations` — but `Chat.tsx` already requests all three existing types (`direct`/`group`/`space`), so this never surfaces as a bug here. Not live-tested with two clients, but the source trace is unambiguous.) |
 
-## Group B — needs server work first (v7.8.2, server-side is currently TODO)
+## Group B — server work is DONE; these are now pure demo wiring
 
-Per the spec's recommended order (small/mechanical first): **1 → 3 → 4 → 2 → 7, then 6 and 5.**
-Demo work on any of these should follow, not precede, the corresponding server merge — the doc
-notes it's safe to build these incrementally since an old server + new SDK degrades gracefully
-(hook errors or empty result).
+**Re-verified 2026-07-09** against the running local server and the `agora-server` source: **all
+seven server-side features have landed.** The old "server-side is currently TODO" framing, and the
+build order that was sequenced around *server* effort, are both obsolete — re-order by demo value.
 
-| # | Feature | SDK hook(s) | Server effort | Notes |
+The installed SDK (`@agora-sdk/core` `1.8.0`) already exports every hook below, so **none of these
+need an SDK upgrade** — each is a UI wiring task in this repo, the same shape as the Group A work.
+
+Verification note: `.env`'s `VITE_API_BASE_URL=http://localhost/v7` reaches the API only through
+the Caddy proxy on `:80` (the server itself listens on `:4000`), and routes mount under
+`/v7/:projectId/` — so a bare `GET /v7/entities` 404s. Probe
+`http://localhost/v7/<projectId>/entities` instead.
+
+| # | Feature | SDK hook(s) | Server | Notes |
 |---|---|---|---|---|
-| B1 | **Notification preferences** | `useNotificationPreferences` (read/upsert) | S | Per-type push opt-out (20 `PushEventType` values) — UI: checklist in `Me.tsx`/`Notifications.tsx` |
-| B2 | **Space visibility** | `visibility` field on space create/update + responses | S | `public`/`unlisted`/`private` — add a field to space create/edit forms in `Spaces.tsx`/`SpaceView.tsx` |
-| B3 | **Follows/connections search** | `query`/`searchFields` params on `useFetchFollowers`/`useFetchFollowing`/`useFetchConnections(ByUserId)` | S | Add a search box to `Follows.tsx` and `Connections.tsx` |
-| B4 | **Conversation mute** | `useMuteConversation` (`8h`/`24h`/`1w`/`forever`/`null`) | S–M | Per-conversation mute button in `Chat.tsx` thread header; reads `mutedUntil`/`mutedForever` off the viewer's own member row |
-| B5 | **Search `includeChildSpaces`** | flag on `useSearchContent`/`useAskContent` bodies | S | Checkbox in `Search.tsx` when a space scope is selected |
-| B6 | **Space-reputation enrichment** | `spaceReputation: { spaceId, includeDescendants? }` param on many GETs | L (deferrable) | Large — server doesn't have space-scoped reputation yet. Once server ships even the `"none"`-alias stub, surface it as a badge next to `AuthorTag`/profile displays |
-| B7 | **User matching** | `useMatchUsers` (`POST /match/users`) | L (deferrable) | Large AI/vector feature. Server doc recommends a stub (`{results: []}`) until the real matching engine lands. Natural home: a new tab or a sub-view under `Search.tsx`/`Social.tsx` ("find users like me") |
+| B1 | **Notification preferences** | `useNotificationPreferences` (read/upsert) | ✅ `GET`/`PUT /push-notifications/preferences` | Per-type push opt-out (20 `PushEventType` values) — UI: checklist in `Me.tsx`/`Notifications.tsx` |
+| B2 | **Space visibility** | `visibility` field on space create/update + responses | ✅ handled on space create + update | `public`/`unlisted`/`private` — add a field to space create/edit forms in `Spaces.tsx`/`SpaceView.tsx` |
+| B3 | **Follows/connections search** | `query`/`searchFields` params on `useFetchFollowers`/`useFetchFollowing`/`useFetchConnections(ByUserId)` | ✅ both params wired | Add a search box to `Follows.tsx` and `Connections.tsx` |
+| B4 | **Conversation mute** | `useMuteConversation` (`8h`/`24h`/`1w`/`forever`/`null`) | ✅ `POST /chat/conversations/:id/mute` | Per-conversation mute button in `Chat.tsx` thread header; reads `mutedUntil`/`mutedForever` off the viewer's own member row |
+| B5 | **Search `includeChildSpaces`** | flag on `useSearchContent`/`useAskContent` bodies | ✅ resolves the subtree via a recursive CTE | Checkbox in `Search.tsx` when a space scope is selected |
+| B6 | **Space-reputation enrichment** | flat `spaceReputationId` / `spaceReputationDescendants` query params on many GETs | ✅ real implementation (not the `"none"`-alias stub); enriches 9 route files | No longer "L (deferrable)" — that sizing was server-side. Surface as a badge next to `AuthorTag`/profile displays. **Note:** this doc previously described a *nested* `spaceReputation: { spaceId, includeDescendants }` param; the wire shape is the two flat params, and the SDK already sends them that way — no contract mismatch |
+| B7 | **User matching** | `useMatchUsers` (`POST /match/users`) | ✅ route live | No longer "L (deferrable)" — that sizing was server-side. Natural home: a new tab or a sub-view under `Search.tsx`/`Social.tsx` ("find users like me") |
 
 ## Suggested demo build order
 
@@ -40,7 +47,8 @@ notes it's safe to build these incrementally since an old server + new SDK degra
 2. ~~A5~~ — investigated, no demo work needed (already works via existing `ChatProvider`/`useConversations` usage)
 3. ~~A2 (Push registration)~~ — done
 4. ~~A1 (Events)~~ — done
-5. Group B items **as their server-side lands**, in the spec's recommended order (B1 → B2 → B3 → B4 → B5, then B6/B7) — up next
+5. Group B items — **no longer gated on server work** (all seven landed; re-verified 2026-07-09).
+   Starting with **B1 (Notification preferences)** — up next
 
 ## Confirmed against installed SDK (1.8.0)
 
