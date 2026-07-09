@@ -136,8 +136,10 @@ wire value is the thing under test.
   button calling `refetch()`. No checkboxes render.
 - **Save failure**: `updatePreferences` rethrows after the SDK's `handleError`. Catch it, show an
   inline muted message. RTK Query's `onQueryStarted` has already undone the optimistic patch, so
-  `disabledTypes` reverts and the checkboxes snap back to the last server-known state; `draft`
-  retains the user's edits and stays `dirty`, so Save can simply be clicked again.
+  `disabledTypes` reverts to the last server-known set. The **checkboxes do not move** — they render
+  from `draft`, which the seeding effect no longer touches — so the user's edits survive verbatim.
+  `dirty` therefore flips back to true and Save re-enables for a retry. Nothing is lost, and the
+  panel does not silently misrepresent the server's state, because `dirty` is showing through.
 - **Signed out**: the hook self-skips when there is no `user`. Unreachable in practice — the Me
   tab is behind `Shell.tsx`'s auth gate.
 
@@ -171,8 +173,8 @@ static check. Checklist, against a running local server:
 2. Uncheck two types → Save enables → click Save → the PUT body carries exactly those two type
    names → reload the tab → they are still unchecked.
 3. Uncheck a type, click Reset → the checkbox re-checks and Save disables, with no network request.
-4. Stop the server, toggle a type, click Save → an inline error appears, the checkbox reverts to
-   its server state, and Save remains enabled for a retry.
+4. Stop the server, toggle a type, click Save → an inline error appears, the checkbox **keeps** the
+   user's edit, and Save remains enabled for a retry. Restart the server, click Save → it succeeds.
 5. Check every box (empty `disabledTypes`) → Save → analytics fires `state: "all-on"`.
    Uncheck every box → Save → `state: "all-off"`.
 6. The panel renders and is usable in a browser context where web push is unsupported
