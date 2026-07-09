@@ -33,7 +33,7 @@ the Caddy proxy on `:80` (the server itself listens on `:4000`), and routes moun
 
 | # | Feature | SDK hook(s) | Server | Notes |
 |---|---|---|---|---|
-| B1 | **Notification preferences** | `useNotificationPreferences` (read/upsert) | ✅ `GET`/`PUT /push-notifications/preferences` | Per-type push opt-out (20 `PushEventType` values) — UI: checklist in `Me.tsx`/`Notifications.tsx` |
+| ~~B1~~ | ~~**Notification preferences**~~ | `useNotificationPreferences` (read/upsert) | ✅ `GET`/`PUT /push-notifications/preferences` | **Done** (2026-07-09, `docs/superpowers/specs/2026-07-09-notification-preferences-design.md` + `docs/superpowers/plans/2026-07-09-notification-preferences.md`) — new `src/NotificationPrefs.tsx`, a 20-type opt-in checklist mounted as a second panel in the `🔔 Push` sub-tab. **Not** in `Notifications.tsx` as originally guessed here: `disabledTypes` is consumed only by the server's push sender, so it provably does not filter the in-app `📥 Inbox`; putting an opt-out next to a list it doesn't filter would mislead. Preferences are account-level (keyed `projectId`+`userId`), so the panel also renders on browsers where web push is unsupported. Live-verified against a running local server (all 8 checklist items), including the optimistic-rollback path: a failed save keeps the user's edits and re-enables Save |
 | B2 | **Space visibility** | `visibility` field on space create/update + responses | ✅ handled on space create + update | `public`/`unlisted`/`private` — add a field to space create/edit forms in `Spaces.tsx`/`SpaceView.tsx` |
 | B3 | **Follows/connections search** | `query`/`searchFields` params on `useFetchFollowers`/`useFetchFollowing`/`useFetchConnections(ByUserId)` | ✅ both params wired | Add a search box to `Follows.tsx` and `Connections.tsx` |
 | B4 | **Conversation mute** | `useMuteConversation` (`8h`/`24h`/`1w`/`forever`/`null`) | ✅ `POST /chat/conversations/:id/mute` | Per-conversation mute button in `Chat.tsx` thread header; reads `mutedUntil`/`mutedForever` off the viewer's own member row |
@@ -48,7 +48,8 @@ the Caddy proxy on `:80` (the server itself listens on `:4000`), and routes moun
 3. ~~A2 (Push registration)~~ — done
 4. ~~A1 (Events)~~ — done
 5. Group B items — **no longer gated on server work** (all seven landed; re-verified 2026-07-09).
-   Starting with **B1 (Notification preferences)** — up next
+   - ~~B1 (Notification preferences)~~ — done
+   - B2–B7 remain; re-order by demo value
 
 ## Confirmed against installed SDK (1.8.0)
 
