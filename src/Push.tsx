@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { usePushRegistration, webPushTokenAdapter } from "@agora-sdk/react-js";
 import { track } from "./analytics";
+import NotificationPrefs from "./NotificationPrefs";
 
 const STORAGE_KEY = "agora_push_registered";
 const SUPPORTED =
@@ -52,31 +53,37 @@ export default function Push() {
 
   if (!SUPPORTED) {
     return (
-      <div className="panel col">
-        <strong>Push notifications</strong>
-        <span className="muted">Push notifications aren't supported in this browser.</span>
+      <div className="col">
+        <div className="panel col">
+          <strong>Push notifications</strong>
+          <span className="muted">Push notifications aren't supported in this browser.</span>
+        </div>
+        <NotificationPrefs registered={false} />
       </div>
     );
   }
 
   return (
-    <div className="panel col">
-      <strong>Push notifications</strong>
-      <div className="row">
-        <span className={`pill ${registered ? "success" : "danger"}`}>
-          {registered ? "Registered" : "Not registered"}
-        </span>
-        <span className="muted">browser permission: {permission}</span>
+    <div className="col">
+      <div className="panel col">
+        <strong>Push notifications</strong>
+        <div className="row">
+          <span className={`pill ${registered ? "success" : "danger"}`}>
+            {registered ? "Registered" : "Not registered"}
+          </span>
+          <span className="muted">browser permission: {permission}</span>
+        </div>
+        <div className="row">
+          <button disabled={registered || registering} onClick={handleRegister}>
+            {registering ? "Registering…" : "Register"}
+          </button>
+          <button disabled={!registered || unregistering} onClick={handleUnregister}>
+            {unregistering ? "Unregistering…" : "Unregister"}
+          </button>
+        </div>
+        {error && <span className="muted">{error}</span>}
       </div>
-      <div className="row">
-        <button disabled={registered || registering} onClick={handleRegister}>
-          {registering ? "Registering…" : "Register"}
-        </button>
-        <button disabled={!registered || unregistering} onClick={handleUnregister}>
-          {unregistering ? "Unregistering…" : "Unregister"}
-        </button>
-      </div>
-      {error && <span className="muted">{error}</span>}
+      <NotificationPrefs registered={registered} />
     </div>
   );
 }
