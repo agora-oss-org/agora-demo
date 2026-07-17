@@ -63,6 +63,10 @@ a { color: var(--accent); }
 .card.redacted, .panel.redacted, .msg.redacted { border: 1px dashed #f87171; opacity: 0.72; }
 .center { display: grid; place-items: center; min-height: 100vh; }
 .login { width: 340px; }
+/* "——— or ———" separator: the rules are pseudo-elements that flex to fill whatever space the
+   label leaves, so it self-centers at any panel width. */
+.or { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .spacer { flex: 1; }
 .msg { padding: 6px 10px; border-radius: 8px; background: #161320; margin-bottom: 6px; }
 .msg.mine { background: #2a2140; }

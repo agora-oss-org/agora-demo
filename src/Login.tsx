@@ -8,11 +8,24 @@ import { DEMO_EMAIL, DEMO_PASSWORD } from "./config";
 // tokens). Forgot-password uses the core useRequestPasswordReset hook to email a reset link; the link
 // itself lands on /auth/reset-password, handled by @agora-sdk/auth-react-js's PasswordResetHandler in
 // Shell.tsx. The same package's ResendVerificationButton covers "didn't get the confirmation email?".
+//
+// Two ways in, separated by an "or": the demo's operator account in one click, or your own account
+// via the normal form. The operator path is the whole reason this screen isn't just a login box —
+// the moderation and admin surfaces are invisible without an operator token (see isOperatorToken in
+// EntityView.tsx), so a visitor who only ever signs up their own account would never know they exist.
+
+// Only offer the one-click path when the deployment actually configured an account for it. Both
+// halves are required — an email with no password can't sign in, and a dangling "or" with nothing
+// above it reads as a bug.
+const ADMIN_LOGIN = Boolean(DEMO_EMAIL && DEMO_PASSWORD);
+
 export default function Login() {
   const { signInWithEmailAndPassword, signUpWithEmailAndPassword } = useAuth();
   const requestPasswordReset = useRequestPasswordReset();
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  // Deliberately NOT prefilled with the demo credentials any more: the operator account now has its
+  // own button, so this form is unambiguously "your own account".
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"in" | "up" | "reset">("in");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -38,6 +51,19 @@ export default function Login() {
       }
     } catch (e: any) {
       setErr(e?.response?.data?.error || e?.message || "Authentication failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const signInAsAdmin = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await signInWithEmailAndPassword({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      track("login", { method: "demo_admin" });
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || "Couldn't sign in as the demo admin");
     } finally {
       setBusy(false);
     }
@@ -122,10 +148,28 @@ export default function Login() {
     <div className="panel login col">
       <div className="brand">🏛️ Agora demo</div>
       <div className="muted">{mode === "in" ? "Sign in" : "Sign up"} via the @agora SDK → Agora <code>/auth</code></div>
+
+      {ADMIN_LOGIN && (
+        <>
+          <button className="primary" disabled={busy} onClick={signInAsAdmin}>
+            {busy ? "…" : "🛠️ Log in as admin"}
+          </button>
+          <div className="muted">
+            Signs you in as a demo <strong>operator</strong> account, so you can see the
+            administration side: moderation pills (🚫 removed / ✅ kept) on posts and comments, plus
+            the 🛠️ Admin link to the admin app. Your own account below sees neither — that's the
+            ordinary-user view.
+          </div>
+          <div className="or">or</div>
+        </>
+      )}
+
       <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input placeholder="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
       {err && <div className="error">{err}</div>}
-      <button className="primary" disabled={busy} onClick={submit}>
+      {/* Not `primary` when the admin button is showing — two gradient buttons in one small panel
+          leaves neither reading as the default action, and the operator path is the intended one. */}
+      <button className={ADMIN_LOGIN ? "" : "primary"} disabled={busy || !email || !password} onClick={submit}>
         {busy ? "…" : mode === "in" ? "Sign in" : "Sign up"}
       </button>
       <button onClick={() => { setMode(mode === "in" ? "up" : "in"); setErr(null); }}>
