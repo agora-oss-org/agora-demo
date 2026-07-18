@@ -7,6 +7,7 @@ import {
   EntityProvider, useEntity, useUser, useAuth,
   useReactionToggle, useCommentSectionData, useCreateReport,
 } from "@agora-sdk/react-js";
+import { reportAndRemove } from "./operatorModeration";
 
 // Report reasons. The SDK exposes only the ReportReasonKey *type* from its index, not the
 // runtime label map, so we mirror the labels here (kept in sync with @agora-sdk/core's
@@ -28,14 +29,16 @@ const REPORT_REASONS: ReadonlyArray<[string, string]> = [
 // Inline disclosure via <details>: closed = just the 🚩 chip; open = a reason picker + optional
 // details + Submit. After a successful report we replace the control with a "✓ Reported" pill.
 function ReportButton({
-  targetType, targetId, ownerId, disabled,
+  targetType, targetId, ownerId, disabled, onRemoved,
 }: {
   targetType: "entity" | "comment";
   targetId: string;
   ownerId?: string;
   disabled?: boolean;
+  onRemoved?: () => void;
 }) {
   const { user } = useUser() as any;
+  const { accessToken } = useAuth() as any;
   const createReport = useCreateReport({ type: targetType }) as any;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>("spam");
@@ -95,6 +98,22 @@ function ReportButton({
     } finally { setBusy(false); }
   };
 
+  // Operator-only shortcut: file THIS report as filled in, then remove the content in one go
+  // (reportAndRemove → the admin's project-level report-resolve). Preserved in moderation history.
+  // No confirm: the operator already filled the panel and clicked a labelled danger button.
+  const removeNow = async () => {
+    setBusy(true); setErr(null);
+    try {
+      await reportAndRemove({ targetType, targetId, reason, details, accessToken });
+      track("moderate_remove", { target: targetType });
+      setDone(true); setOpen(false);
+      setReason("spam"); setDetails("");
+      onRemoved?.();
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || "Couldn't remove this content");
+    } finally { setBusy(false); }
+  };
+
   return (
     <>
       <button
@@ -132,6 +151,14 @@ function ReportButton({
             {err && <div className="error">{err}</div>}
             <div className="row">
               <span className="spacer" />
+              {isOperatorToken(accessToken) && (
+                <button
+                  className="danger"
+                  disabled={busy}
+                  onClick={removeNow}
+                  title="Files this report, then removes the content — kept in moderation history"
+                >{busy ? "Working…" : "🚫 Remove"}</button>
+              )}
               <button className="primary" disabled={busy} onClick={submit}>{busy ? "Submitting…" : "Submit report"}</button>
             </div>
           </div>

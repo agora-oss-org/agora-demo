@@ -30,7 +30,7 @@ export type AnalyticsEvent =
   // comments
   | "post_comment" | "edit_comment" | "delete_comment" | "change_comment_sort"
   // reactions (entity + comment), reports
-  | "add_reaction" | "remove_reaction" | "submit_report"
+  | "add_reaction" | "remove_reaction" | "submit_report" | "moderate_remove"
   // spaces
   | "create_space" | "join_space" | "leave_space"
   // chat
