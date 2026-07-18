@@ -19,7 +19,7 @@ services:
       # overrides them anyway.
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost/v7}
-        VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-agora-admin@gmail.com}
+        VITE_DEMO_EMAIL: ${VITE_DEMO_EMAIL:-demo-admin@gmail.com}
         VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-DemoPass123!}
     ports:
       - "5175:5175"
@@ -30,7 +30,7 @@ services:
       # dev-server start, no rebuild needed. ADMIN_URL/UMAMI default empty (feature hidden / analytics
       # off) and SECURE_CHAT_DEBUG defaults off, same as an unset VITE_* would bake to.
       VITE_API_BASE_URL: ${AGORA_DEMO_API_BASE_URL:-http://localhost/v7}
-      VITE_DEMO_EMAIL: ${AGORA_DEMO_EMAIL:-agora-admin@gmail.com}
+      VITE_DEMO_EMAIL: ${AGORA_DEMO_EMAIL:-demo-admin@gmail.com}
       VITE_DEMO_PASSWORD: ${AGORA_DEMO_PASSWORD:-DemoPass123!}
       VITE_ADMIN_URL: ${AGORA_DEMO_ADMIN_URL:-}
       VITE_AGORA_SECURE_CHAT_DEBUG: ${AGORA_DEMO_SECURE_CHAT_DEBUG:-false}

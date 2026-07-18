@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@agora-sdk/auth-react-js": "^0.10.2",
-    "@agora-sdk/core": "^1.8.0",
-    "@agora-sdk/react-js": "^1.8.0",
+    "@agora-sdk/core": "2.0.0",
+    "@agora-sdk/react-js": "^2.0.0",
     "@agora-sdk/secure-chat-core": "^0.10.2",
     "@agora-sdk/secure-chat-react-js": "^0.10.2",
     "@agora-sdk/social-core": "^0.10.2",

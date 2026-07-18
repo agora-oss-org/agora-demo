@@ -16,10 +16,8 @@ import { useSecureStore } from "./secure/SecureStoreContext";
 import Spaces from "./Spaces";
 import Notifications from "./Notifications";
 import Me from "./Me";
-import Social from "./Social";
 import Events from "./Events";
-import { SocialProvider } from "@agora-sdk/social-core";
-import { API_BASE_URL, PROJECT_ID, ADMIN_URL } from "./config";
+import { ADMIN_URL } from "./config";
 
 type Tab = "feed" | "spaces" | "events" | "search" | "chat" | "secure" | "social" | "notifications" | "profile";
 // Each tab is a virtual page view (the app has no router, so these populate Umami's "Pages"
@@ -43,7 +41,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "search", label: "🔍 Search" },
   { id: "chat", label: "💬 Chat" },
   { id: "secure", label: "🔒 Secure Chat" },
-  { id: "social", label: "☀️ Social" },
+  // ☀️ Social is withheld from release — not ready. `src/Social.tsx` is intact and the `social`
+  // Tab id / PATHS entry are still here; restoring it means re-adding this entry, the
+  // `{tab === "social" && <Social />}` render, and the SocialProvider wrapper at the bottom of
+  // this file (the provider must come back too — it GETs /social/transparency on mount, which is
+  // why hiding only this tab entry would still have left every page load hitting the API).
   { id: "notifications", label: "🔔 Inbox" },
   { id: "profile", label: "👤 Me" },
 ];
@@ -219,7 +221,6 @@ export default function Shell() {
       {tab === "search" && <Search />}
       {tab === "chat" && <Chat />}
       {tab === "secure" && (unlocked ? <SecureChat /> : <SecureUnlock />)}
-      {tab === "social" && <Social />}
       {tab === "notifications" && (
         <Notifications
           onOpen={(entityId, commentId) =>
@@ -240,13 +241,11 @@ export default function Shell() {
   // Provide the public-profile overlay above everything (deep link + tabs), so any AuthorTag can
   // open a profile. "Edit profile →" on your own profile drops the overlay and jumps to the Me tab.
   return (
-    <SocialProvider projectId={PROJECT_ID} baseUrl={API_BASE_URL} accessToken={accessToken ?? undefined}>
-      <ProfileViewerProvider
-        currentUserId={user?.id}
-        onEditOwnProfile={() => { setDeepLink(null); setTab("profile"); }}
-      >
-        {body}
-      </ProfileViewerProvider>
-    </SocialProvider>
+    <ProfileViewerProvider
+      currentUserId={user?.id}
+      onEditOwnProfile={() => { setDeepLink(null); setTab("profile"); }}
+    >
+      {body}
+    </ProfileViewerProvider>
   );
 }
