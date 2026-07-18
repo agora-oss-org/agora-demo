@@ -190,14 +190,19 @@ export default function EntityView({
   // link), since they all render this component.
   useEffect(() => { trackPageView(PATHS.entity); }, []);
   const providerProps = { entityId, include: ["user"] } as any;
+  // After an operator removes the entity/a comment, remount the provider so it re-pulls the entity
+  // and comment section from the server — operators still receive removed content, so the existing
+  // tombstone branches render it. This callback lives ABOVE the provider, so it survives the remount.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const onRemoved = () => setRefreshKey((k) => k + 1);
   return (
-    <EntityProvider {...providerProps}>
-      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} highlightEntity={highlightEntity} />
+    <EntityProvider key={refreshKey} {...providerProps}>
+      <Inner onBack={onBack} entityId={entityId} backLabel={backLabel} highlightCommentId={highlightCommentId} highlightEntity={highlightEntity} onRemoved={onRemoved} />
     </EntityProvider>
   );
 }
 
-function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntity }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string; highlightEntity?: boolean }) {
+function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntity, onRemoved }: { entityId: string; onBack: () => void; backLabel: string; highlightCommentId?: string; highlightEntity?: boolean; onRemoved?: () => void }) {
   const { entity, updateEntity, deleteEntity } = useEntity() as any;
   const { user } = useUser() as any;
   const [editing, setEditing] = useState(false);
@@ -312,7 +317,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntit
             {/* preserve newlines/whitespace and wrap long unbroken strings so the full body shows */}
             <div className="prewrap">{entity?.content}</div>
             <EntityImages files={entity?.files} />
-            {entity && <Reactions entityId={entityId} entity={entity} />}
+            {entity && <Reactions entityId={entityId} entity={entity} onRemoved={onRemoved} />}
           </>
         )}
       </div>
@@ -322,6 +327,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntit
           entityId={entityId}
           highlightCommentId={highlightCommentId}
           onPosted={() => scheduleModerationRefresh(() => setCommentsKey((k) => k + 1))}
+          onRemoved={onRemoved}
         />
       )}
     </div>
@@ -481,7 +487,7 @@ function EntityImages({ files }: { files?: any[] }) {
   );
 }
 
-function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
+function Reactions({ entityId, entity, onRemoved }: { entityId: string; entity: any; onRemoved?: () => void }) {
   const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
     targetType: "entity",
     targetId: entityId,
@@ -509,7 +515,7 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
       <span className="muted">your reaction: {currentReaction ?? "none"}</span>
       {err && <span className="error">{err}</span>}
       <span className="spacer" />
-      <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} />
+      <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} onRemoved={onRemoved} />
     </div>
   );
 }
@@ -518,13 +524,14 @@ function Reactions({ entityId, entity }: { entityId: string; entity: any }) {
 // edit + delete for the comment's author (→ PATCH/DELETE /comments/:id via the comment section's
 // updateComment/deleteComment, which keep the local tree in sync).
 function CommentRow({
-  comment, highlighted, currentUserId, onUpdate, onDelete,
+  comment, highlighted, currentUserId, onUpdate, onDelete, onRemoved,
 }: {
   comment: any;
   highlighted?: boolean;
   currentUserId?: string;
   onUpdate: (p: { commentId: string; content: string }) => Promise<void>;
   onDelete: (p: { commentId: string }) => Promise<void>;
+  onRemoved?: () => void;
 }) {
   const isReal = /^[0-9a-f-]{36}$/i.test(comment.id); // optimistic temp comments have a short id
   const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
@@ -634,7 +641,7 @@ function CommentRow({
           </>
         )}
         {!isOwner && (
-          <ReportButton targetType="comment" targetId={comment.id} ownerId={comment.userId} disabled={!isReal} />
+          <ReportButton targetType="comment" targetId={comment.id} ownerId={comment.userId} disabled={!isReal} onRemoved={onRemoved} />
         )}
       </div>
       {/* surface a delete error that happens with the editor closed */}
@@ -643,7 +650,7 @@ function CommentRow({
   );
 }
 
-function Comments({ entityId, highlightCommentId, onPosted }: { entityId: string; highlightCommentId?: string; onPosted?: () => void }) {
+function Comments({ entityId, highlightCommentId, onPosted, onRemoved }: { entityId: string; highlightCommentId?: string; onPosted?: () => void; onRemoved?: () => void }) {
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
   const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore, sortBy, setSortBy, sortDir, setSortDir } = cs;
   const { user } = useUser() as any;
@@ -729,6 +736,7 @@ function Comments({ entityId, highlightCommentId, onPosted }: { entityId: string
             currentUserId={user?.id}
             onUpdate={updateComment}
             onDelete={deleteComment}
+            onRemoved={onRemoved}
           />
         ))}
       </div>
