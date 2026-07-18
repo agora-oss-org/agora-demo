@@ -110,7 +110,8 @@ manual test harness.
 - In the panel footer, when `isOperatorToken(accessToken)`, render a `className="danger"` **🚫 Remove**
   button to the left of "Submit report". Tooltip: "Files this report, then removes the content — kept
   in moderation history".
-- Handler: `window.confirm(...)` (matches the owner-delete confirm pattern), then
+- Handler: fires immediately (no confirm — the operator already filled the panel and clicked a
+  clearly-labelled danger button), calling
   `reportAndRemove({ targetType, targetId, reason, details, accessToken })`, then `track("moderate_remove",
   { target: targetType })`, close the panel, and call `onRemoved?.()`. Reuse the existing `busy`/`err`
   state for the in-flight/error UI. On error, surface `err` in the panel (no `onRemoved`).
@@ -144,7 +145,7 @@ Add `moderate_remove` to the `AnalyticsEvent` union. Fire it on success with `{ 
 
 1. Signed in as an operator (`@demoadmin`), open a post → Report panel shows **🚫 Remove** beside
    Submit report; signed in as a non-operator, it does not.
-2. Fill a reason + details, click Remove, confirm → the post re-renders with the 🚫 removed tombstone
+2. Fill a reason + details, click Remove → the post re-renders with the 🚫 removed tombstone
    and the details as the reason.
 3. Same on a comment → the comment shows its removed tombstone.
 4. In the admin app, the report appears in the **moderated** queue (not pending), decision "removed".
