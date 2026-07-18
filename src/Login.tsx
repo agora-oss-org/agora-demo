@@ -147,7 +147,11 @@ export default function Login() {
   return (
     <div className="panel login col">
       <div className="brand">🏛️ Agora demo</div>
-      <div className="muted">{mode === "in" ? "Sign in" : "Sign up"} via the @agora SDK → Agora <code>/auth</code></div>
+      <div className="muted">
+        Welcome 👋 This is a <strong>reference implementation</strong> of the @agora SDK — every
+        screen drives the real hooks against a live Agora server. Judge it on what it does, not how
+        it looks: the styling is deliberately plain, the functionality is the whole point.
+      </div>
 
       <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input placeholder="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -164,7 +168,7 @@ export default function Login() {
         </button>
       )}
 
-      {ADMIN_LOGIN && (
+      {ADMIN_LOGIN && mode === "in" && (
         <>
           <div className="or">or</div>
           {/* Deliberately not `primary` — the form above owns that now. Two gradient buttons in one
