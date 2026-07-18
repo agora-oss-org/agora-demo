@@ -178,9 +178,9 @@ export default function Login() {
           </button>
           <div className="muted">
             Signs you in as a demo <strong>operator</strong> account, so you can see the
-            administration side: moderation pills (🚫 removed / ✅ kept) on posts and comments, plus
-            the 🛠️ Admin link to the admin app. Your own account sees neither — that's the
-            ordinary-user view.
+            administration side: a 🚫 Remove control in the report panel that takes down a reported
+            post or comment inline (and keeps it in moderation history), moderation pills (🚫 removed
+            / ✅ kept) showing what's been actioned, plus the 🛠️ Admin link to the admin app.
           </div>
         </>
       )}
