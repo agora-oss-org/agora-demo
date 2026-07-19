@@ -1,7 +1,7 @@
 {
   "name": "agora-demo",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "description": "Demo/test app driving the @agora SDK hooks against a running Agora server",
   "author": "Jenova Marie <jenova-marie@proton.me>",
