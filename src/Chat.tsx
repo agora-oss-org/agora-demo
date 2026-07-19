@@ -214,6 +214,7 @@ function Conversation({
               allowGif
               submitOnEnter
               analyticsTarget="chat"
+              hasAttachment={files.length > 0}
             />
           </div>
           <label title="attach files" style={{ cursor: "pointer", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 8 }}>
