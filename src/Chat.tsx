@@ -11,6 +11,7 @@ import {
 } from "@agora-sdk/react-js";
 import { fileImageSrc } from "./EntityView";
 import MarkdownBody from "./MarkdownBody";
+import Composer from "./Composer";
 import { track, trackPageView, PATHS } from "./analytics";
 
 // Realtime chat. The list comes from useConversations; the open thread is wrapped in
@@ -130,7 +131,6 @@ function Conversation({
   // useConversationContext (from ConversationProvider) exposes messages/send/… AND members (the
   // provider loads them), so we can title a DM with the other participant — no server change needed.
   const { messages, send, loadOlder, hasMore, mark, members } = useConversationContext() as any;
-  const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [showMembers, setShowMembers] = useState(false);
   const isGroup = convo?.type === "group";
@@ -150,13 +150,21 @@ function Conversation({
   // on every switch).
   useEffect(() => { trackPageView(PATHS.conversation); }, []);
 
-  const submit = async () => {
-    if (!text.trim() && files.length === 0) return;
-    const t = text.trim(); const f = files;
-    setText(""); setFiles([]);
+  const submit = async ({ content, mentions, gif }: { content: string; mentions: any[]; gif?: any }) => {
+    const f = files;
+    setFiles([]);
     // useSendMessage switches to a multipart upload when `files` is present; file-only is allowed.
-    await send({ ...(t ? { content: t } : {}), ...(f.length ? { files: f } : {}) });
-    track("send_message", { convo: convo?.type === "direct" ? "dm" : (convo?.type ?? "group"), hasFiles: f.length > 0 });
+    // It carries `gif` and `mentions` over both the JSON and multipart paths.
+    await send({
+      ...(content ? { content } : {}),
+      ...(mentions?.length ? { mentions } : {}),
+      ...(gif ? { gif } : {}),
+      ...(f.length ? { files: f } : {}),
+    });
+    track("send_message", {
+      convo: convo?.type === "direct" ? "dm" : (convo?.type ?? "group"),
+      hasFiles: f.length > 0,
+    });
   };
 
   return (
@@ -181,19 +189,37 @@ function Conversation({
         {[...(messages ?? [])].reverse().map((m: any) => (
           <div key={m.id} className={"msg" + (m.userId === user?.id ? " mine" : "")}>
             <MarkdownBody content={m.content} mentions={m.mentions} />
+            {m.gif && (
+              <img
+                src={m.gif.gifUrl}
+                alt={m.gif.altText}
+                style={{ maxWidth: "100%", maxHeight: 220, borderRadius: 8, marginTop: 4 }}
+              />
+            )}
             <MessageFiles files={m.files} />
             <div className="muted">{m.userId === user?.id ? "you" : (m.userId?.slice(0, 8) || "system")} · {new Date(m.createdAt).toLocaleTimeString()}</div>
           </div>
         ))}
       </div>
       <div className="col">
-        <div className="row">
-          <input placeholder="message…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <div style={{ flex: 1 }}>
+            {/* submitOnEnter preserves the old single-line input's Enter-to-send; Shift+Enter now
+                inserts a newline, which the old <input> couldn't do at all. */}
+            <Composer
+              onSubmit={submit}
+              placeholder="message…"
+              submitLabel="Send"
+              rows={2}
+              allowGif
+              submitOnEnter
+              analyticsTarget="chat"
+            />
+          </div>
           <label title="attach files" style={{ cursor: "pointer", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 8 }}>
             📎
             <input type="file" multiple style={{ display: "none" }} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
           </label>
-          <button className="primary" onClick={submit}>Send</button>
         </div>
         {files.length > 0 && (
           <div className="muted">📎 {files.map((f) => f.name).join(", ")} <button onClick={() => setFiles([])}>clear</button></div>
