@@ -8,14 +8,16 @@ import { GIPHY_API_KEY } from "./config";
 // exact object that gets persisted on Comment.gif / ChatMessage.gif.
 function toGifData(gif: IGif) {
   const img = gif.images;
-  const w = Number(img.original?.width) || 1;
-  const h = Number(img.original?.height) || 1;
+  // `original` is a required field on IImages, so no optional chaining — it was inconsistent
+  // with `img.original.url` two lines down, which would have thrown first anyway.
+  const w = Number(img.original.width) || 1;
+  const h = Number(img.original.height) || 1;
   return {
     id: String(gif.id),
     url: img.original.url,
     gifUrl: img.original.url,
     gifPreviewUrl: img.fixed_width_small?.url ?? img.preview_gif?.url ?? img.original.url,
-    altText: gif.title || (gif as { alt_text?: string }).alt_text || "GIF",
+    altText: gif.title || gif.alt_text || "GIF",
     aspectRatio: `${w} / ${h}`,
   };
 }

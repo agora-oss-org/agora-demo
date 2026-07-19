@@ -115,7 +115,9 @@ export default function Composer({
           rows={rows}
           value={value}
           autoFocus={autoFocus}
-          disabled={busy}
+          // Also disabled while `submitting`: the success path clears the box, so text typed
+          // during an in-flight request would be destroyed the moment the response lands.
+          disabled={busy || submitting}
           placeholder={placeholder}
           onChange={(e) => { setValue(e.target.value); syncSelection(e.target); }}
           onClick={(e) => syncSelection(e.currentTarget)}
@@ -195,7 +197,9 @@ export default function Composer({
         <span className="spacer" />
         {onCancel && <button onClick={onCancel} disabled={busy || submitting}>Cancel</button>}
         <button className="primary" onClick={submit} disabled={!canSubmit}>
-          {busy || submitting ? "Posting…" : submitLabel}
+          {/* Derived from submitLabel so the verb matches the surface — a hardcoded "Posting…"
+              was wrong on Send/Save/Create. */}
+          {busy || submitting ? `${submitLabel}…` : submitLabel}
         </button>
       </div>
     </div>
