@@ -6,7 +6,7 @@ import {
   useFetchSpaceConversation, ConversationProvider, useConversationContext,
   useFetchDigestConfig, useUpdateDigestConfig,
 } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 import { track, trackPageView, PATHS } from "./analytics";
 
@@ -217,6 +217,7 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
         <div key={e.id} className={"card" + (isModeratedOut(e) ? " redacted" : "")} onClick={() => setSelectedEntity(e.id)} style={{ cursor: "pointer" }}>
           <div className="row">
             <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
+            <PublicPill entity={e} />
             <ModerationPill entity={e} />
           </div>
           <div className="clamp3">{e.content}</div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useEntityList } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, AuthorTag } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill, AuthorTag } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 import { track } from "./analytics";
 import { useModerationRefresh } from "./useModerationRefresh";
@@ -52,6 +52,7 @@ export default function Feed() {
         <div key={e.id} className={"card" + (isModeratedOut(e) ? " redacted" : "")} onClick={() => setSelected(e.id)} style={{ cursor: "pointer" }}>
           <div className="row">
             <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
+            <PublicPill entity={e} />
             <ModerationPill entity={e} />
             <span className="spacer" />
             <AuthorTag user={e.user} />

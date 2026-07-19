@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchContent } from "@agora-sdk/react-js";
-import EntityView, { isModeratedOut, ModerationPill } from "./EntityView";
+import EntityView, { isModeratedOut, ModerationPill, PublicPill } from "./EntityView";
 import { track } from "./analytics";
 
 // Semantic search via the SDK's useSearchContent → POST /v7/:project/search/content (Voyage + pgvector).
@@ -54,6 +54,7 @@ export default function Search() {
           >
             <div className="row">
               <h4 style={{ margin: 0 }}>{r.record?.title || "(untitled)"}</h4>
+              {isEntity && <PublicPill entity={r.record} />}
               {isEntity && <ModerationPill entity={r.record} />}
             </div>
             <div className="clamp3">{r.record?.content}</div>

@@ -301,6 +301,7 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntit
           <>
             <div className="row">
               <h3 style={{ margin: 0 }}>{entity?.title || "(untitled)"}</h3>
+              <PublicPill entity={entity} />
               <ModerationPill entity={entity} />
               {/* Renders once the SDK supports include=user on EntityProvider (see the CR). */}
               <AuthorTag user={entity?.user} />
@@ -468,6 +469,27 @@ export function ModerationPill({ entity }: { entity: any }) {
   return removed
     ? <span className="pill danger" title={title}>🚫 removed</span>
     : <span className="pill success" title={title}>✅ kept</span>;
+}
+
+// Internet-visibility pill (Agora extension). `entity.public` is shaped onto every entity response
+// (server `shape.ts`: `public: row.isPublic ?? false`) — no `include` needed — but the published
+// @agora-sdk `Entity` type doesn't declare it yet, hence the `any` entity like everywhere else here.
+//
+// `true` means the post is readable anonymously off the auth wall via `GET /public/entities/:id`.
+// Renders nothing when false (the default), so a normal post's display is unchanged.
+//
+// Caveat worth knowing when reading this pill: the server's real gate re-derives
+// `entity.public AND space-is-public` live, and only `public: true` is ladder-validated on write —
+// un-publishing is never blocked. So an entity can keep a stale `public: true` after its space went
+// members-only, in which case /public/* 404s it despite this pill. Distinguishing that needs
+// `include: ["space"]` on the fetches to check `readingPermission`; not worth it for a flag display.
+export function PublicPill({ entity }: { entity: any }) {
+  if (entity?.public !== true) return null;
+  return (
+    <span className="pill" title="Internet-public — readable anonymously, without an account, via the /public API">
+      🌐 Public
+    </span>
+  );
 }
 
 function EntityImages({ files }: { files?: any[] }) {

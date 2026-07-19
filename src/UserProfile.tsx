@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFetchUser, useEntityList, useFollowManager, useRequestConnection } from "@agora-sdk/react-js";
-import EntityView, { fileImageSrc, isModeratedOut, ModerationPill } from "./EntityView";
+import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill } from "./EntityView";
 import { track, trackPageView, PATHS } from "./analytics";
 
 // Public, read-only view of any user — opened from a clicked author name (AuthorTag → the
@@ -132,6 +132,7 @@ export default function UserProfile({
             >
               <div className="row">
                 <h4 style={{ margin: 0 }}>{e.title || "(untitled)"}</h4>
+                <PublicPill entity={e} />
                 <ModerationPill entity={e} />
                 <span className="spacer" />
                 <span className="muted">open →</span>
