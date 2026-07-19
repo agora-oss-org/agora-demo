@@ -53,7 +53,11 @@ export type AnalyticsEvent =
   // change_event_filter { timeWindow, sortBy, sortDir }, set_rsvp { status }; the rest (edit/
   // cancel/delete/withdraw/host/invite) fire with no metadata
   | "create_event" | "edit_event" | "cancel_event" | "delete_event" | "change_event_filter"
-  | "set_rsvp" | "withdraw_rsvp" | "add_host" | "remove_host" | "add_invite" | "remove_invite";
+  | "set_rsvp" | "withdraw_rsvp" | "add_host" | "remove_host" | "add_invite" | "remove_invite"
+  // composer — metadata: insert_gif { surface: "comment"|"chat" },
+  // insert_mention { target: "comment"|"entity"|"chat" }. The GIPHY search term is free text and
+  // is NEVER tracked.
+  | "insert_gif" | "insert_mention";
 
 // Virtual page-view paths for the no-router SPA — tabs + drill-down details. Centralized so Shell
 // and the detail views share one set of names (Umami's "Pages" report keys off these).

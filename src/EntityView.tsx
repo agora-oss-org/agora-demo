@@ -9,6 +9,7 @@ import {
 } from "@agora-sdk/react-js";
 import { reportAndRemove } from "./operatorModeration";
 import MarkdownBody from "./MarkdownBody";
+import Composer from "./Composer";
 
 // Report reasons. The SDK exposes only the ReportReasonKey *type* from its index, not the
 // runtime label map, so we mirror the labels here (kept in sync with @agora-sdk/core's
@@ -636,6 +637,13 @@ function CommentRow({
         <>
           {comment.user && <AuthorTag user={comment.user} prefix="" />}
           <MarkdownBody content={comment.content} mentions={comment.mentions} />
+          {comment.gif && (
+            <img
+              src={comment.gif.gifUrl}
+              alt={comment.gif.altText}
+              style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, marginTop: 4 }}
+            />
+          )}
         </>
       )}
       <div className="row" style={{ marginTop: 4 }}>
@@ -678,19 +686,13 @@ function Comments({ entityId, highlightCommentId, onPosted, onRemoved }: { entit
   const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
   const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore, sortBy, setSortBy, sortDir, setSortDir } = cs;
   const { user } = useUser() as any;
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  const post = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    setErr(null);
-    // The server requires read access to comment (assertCanReadEntity); show its rejection rather
-    // than dropping the comment silently.
-    try { await createComment({ content: text }); track("post_comment"); setText(""); onPosted?.(); }
-    catch (e: any) { setErr(e?.response?.data?.error || "Couldn't post your comment — you may not have access."); }
-    finally { setBusy(false); }
+  const post = async ({ content, mentions, gif }: { content: string; mentions: any[]; gif?: any }) => {
+    // The SDK's comment path self-filters `mentions` to those whose @username still appears in the
+    // content, so typed-then-deleted mentions need no handling here.
+    await createComment({ content: content || undefined, mentions, gif });
+    track("post_comment");
+    onPosted?.();
   };
 
   // The SDK keeps optimistically-added comments (the ones you just posted) in a separate
@@ -737,19 +739,13 @@ function Comments({ entityId, highlightCommentId, onPosted, onRemoved }: { entit
         </div>
       )}
       <div className="col">
-        <textarea
+        <Composer
+          onSubmit={post}
           placeholder="add a comment"
-          rows={3}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") post(); }}
+          submitLabel="Post"
+          allowGif
+          analyticsTarget="comment"
         />
-        <div className="row">
-          <span className="muted">⌘/Ctrl + Enter to post</span>
-          {err && <span className="error">{err}</span>}
-          <span className="spacer" />
-          <button className="primary" disabled={busy} onClick={post}>Post</button>
-        </div>
       </div>
       <div className="scroll col">
         {all.map((c: any) => (
