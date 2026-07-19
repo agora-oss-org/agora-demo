@@ -16,6 +16,8 @@ set -eu
 : "${AGORA_DEMO_SECURE_CHAT_DEBUG:=false}"
 : "${AGORA_DEMO_UMAMI_URL:=}"
 : "${AGORA_DEMO_UMAMI_ID:=}"
+# GIPHY key for the composer's GIF picker (client-side, not a secret). Empty → GIF button hidden.
+: "${AGORA_DEMO_GIPHY_API_KEY:=}"
 # Origin the Agora server stamps into sign-up / password-reset / verification-email links (the SDK's
 # emailRedirectTo, see src/config.ts). Defaults to the public demo's own front-end origin — same
 # convention as AGORA_DEMO_API_BASE_URL defaulting to its backend above — so those emails land back
@@ -51,6 +53,7 @@ window.__AGORA__ = {
   umamiUrl: "${AGORA_DEMO_UMAMI_URL}",
   umamiDemoId: "${AGORA_DEMO_UMAMI_ID}",
   emailRedirectTo: "${AGORA_DEMO_EMAIL_REDIRECT_TO}",
+  giphyApiKey: "${AGORA_DEMO_GIPHY_API_KEY}",
 };
 EOF
 

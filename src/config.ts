@@ -21,6 +21,7 @@ declare global {
       umamiUrl?: string;
       umamiDemoId?: string;
       emailRedirectTo?: string;
+      giphyApiKey?: string;
     };
     // @agora-sdk/core's getEnvVar() checks this global BEFORE import.meta.env (see its
     // utils/env.ts) — the one runtime-injectable seam it exposes. We use it below to carry
@@ -68,3 +69,10 @@ const EMAIL_REDIRECT_TO: string = runtime.emailRedirectTo || import.meta.env.VIT
 if (typeof window !== "undefined" && EMAIL_REDIRECT_TO) {
   window.__vite_env = { ...window.__vite_env, VITE_AGORA_EMAIL_REDIRECT_TO: EMAIL_REDIRECT_TO };
 }
+
+// GIPHY SDK key for the composer's GIF picker. Client-side and visible in the browser — NOT a
+// secret like AGORA_UMAMI_API_KEY. Runtime-injected (not a build arg) so the published image ships
+// keyless and each deployment supplies its own. Empty → the GIF button is hidden and everything
+// else still works.
+export const GIPHY_API_KEY: string =
+  runtime.giphyApiKey || import.meta.env.VITE_GIPHY_API_KEY || "";
