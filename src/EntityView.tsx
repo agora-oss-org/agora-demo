@@ -5,7 +5,7 @@ import { useProfileViewer } from "./ProfileViewerContext";
 import { useModerationRefresh } from "./useModerationRefresh";
 import {
   EntityProvider, useEntity, useUser, useAuth,
-  useReactionToggle, useCommentSectionData, useCreateReport,
+  useReactionToggle, CommentSectionProvider, useCommentSection, useFetchManyComments, useCreateReport,
 } from "@agora-sdk/react-js";
 import { reportAndRemove } from "./operatorModeration";
 import MarkdownBody from "./MarkdownBody";
@@ -539,7 +539,7 @@ function Reactions({ entityId, entity, onRemoved }: { entityId: string; entity: 
 // edit + delete for the comment's author (→ PATCH/DELETE /comments/:id via the comment section's
 // updateComment/deleteComment, which keep the local tree in sync).
 function CommentRow({
-  comment, highlighted, currentUserId, onUpdate, onDelete, onRemoved,
+  comment, highlighted, currentUserId, onUpdate, onDelete, onRemoved, depth = 0, highlightCommentId,
 }: {
   comment: any;
   highlighted?: boolean;
@@ -547,6 +547,8 @@ function CommentRow({
   onUpdate: (p: { commentId: string; content: string }) => Promise<void>;
   onDelete: (p: { commentId: string }) => Promise<void>;
   onRemoved?: () => void;
+  depth?: number;
+  highlightCommentId?: string;
 }) {
   const isReal = /^[0-9a-f-]{36}$/i.test(comment.id); // optimistic temp comments have a short id
   const { currentReaction, reactionCounts, toggleReaction, loading } = useReactionToggle({
@@ -570,6 +572,123 @@ function CommentRow({
   const [draft, setDraft] = useState<string>(comment.content ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Nested replies: collapsed by default ("View N replies"), so a subthread is only fetched when
+  // someone asks for it. Everything here comes from the shared CommentSectionContext rather than
+  // being prop-drilled down every level of the tree.
+  //
+  // NOTE: this deliberately does NOT use the SDK's `useReplies`, which is the hook this surface is
+  // "supposed" to use. That hook omits `entityId` from its request and the server rejects it with
+  // `400 comments/missing-entity-id`, so it cannot fetch replies at all — see
+  // ../agora-sdk/docs/BUG_REPORT.md #1. We drive `useFetchManyComments` directly instead (passing
+  // entityId ourselves), mirroring what agora-www's CommentNode.tsx does for the same reason.
+  // Swap back to `useReplies` once that lands; the surrounding UI shouldn't need to change.
+  const { createComment, entity, entityCommentsTree, addCommentsToTree, sortBy } = useCommentSection() as any;
+  const fetchManyComments = useFetchManyComments() as any;
+  const [expanded, setExpanded] = useState(false);
+  const [replying, setReplying] = useState(false);
+  const [repliesPage, setRepliesPage] = useState(0);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const [hasMoreReplies, setHasMoreReplies] = useState(false);
+  const replyCount = comment.repliesCount ?? 0;
+  // Indent each level, but stop compounding after a few so deep threads don't march off-screen.
+  const indent = Math.min(depth, 4) * 16;
+
+  // Replies live in the shared tree (the fetch below folds them in), not in local state — so an
+  // optimistically-posted reply and a fetched one render through the same path. Oldest-first, which
+  // is how a conversation reads.
+  const repliesMap = entityCommentsTree?.[comment.id]?.replies ?? {};
+  const replies = Object.values(repliesMap).sort(
+    (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  ) as any[];
+  const hasReplies = replyCount > 0 || replies.length > 0;
+
+  const loadReplies = async (reset = false) => {
+    if (!entity?.id || loadingReplies) return;
+    setLoadingReplies(true);
+    try {
+      const nextPage = reset ? 1 : repliesPage + 1;
+      const res = await fetchManyComments({
+        entityId: entity.id, // ← the param useReplies forgets
+        parentId: comment.id,
+        page: nextPage,
+        sortBy: sortBy ?? "top",
+        limit: 10,
+        include: "user",
+      });
+      if (res?.data?.length) addCommentsToTree?.(res.data, false);
+      setRepliesPage(nextPage);
+      setHasMoreReplies(Boolean(res?.pagination?.hasMore));
+    } catch { /* transient — the expander stays clickable */ }
+    finally { setLoadingReplies(false); }
+  };
+
+  const expandReplies = () => {
+    setExpanded(true);
+    track("expand_replies");
+    if (repliesPage === 0 && replies.length === 0) loadReplies(true);
+  };
+
+  const postReply = async ({ content, mentions, gif }: { content: string; mentions: any[]; gif?: any }) => {
+    // parentId is what makes this a reply — the SDK folds the result into the tree under this
+    // comment, so expand or it lands somewhere unseen.
+    await createComment({ content: content || undefined, mentions, gif, parentId: comment.id });
+    track("post_comment");
+    setReplying(false);
+    setExpanded(true);
+    // Replying to a comment whose existing replies were never loaded would otherwise show only
+    // your own — the optimistic insert makes replies.length non-zero, defeating the guard above.
+    if (repliesPage === 0 && replyCount > 0) loadReplies(true);
+  };
+
+  // The replies subtree + its expander, shared by the tombstone and normal render paths below —
+  // a soft-deleted comment keeps its children (Reddit-style), so they must stay reachable.
+  const repliesBlock = hasReplies ? (
+    <>
+      {!expanded && (
+        <button
+          className="linklike"
+          style={{ alignSelf: "flex-start", fontSize: 12 }}
+          onClick={expandReplies}
+        >
+          ▶ View {replyCount || replies.length} {(replyCount || replies.length) === 1 ? "reply" : "replies"}
+        </button>
+      )}
+      {expanded && (
+        <div className="col" style={{ gap: 4 }}>
+          <button
+            className="linklike"
+            style={{ alignSelf: "flex-start", fontSize: 12 }}
+            onClick={() => setExpanded(false)}
+          >
+            ▼ Hide replies
+          </button>
+          {replies.map((r: any) => (
+            <CommentRow
+              key={r.id}
+              comment={r}
+              depth={depth + 1}
+              highlighted={!!highlightCommentId && r.id === highlightCommentId}
+              highlightCommentId={highlightCommentId}
+              currentUserId={currentUserId}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              onRemoved={onRemoved}
+            />
+          ))}
+          {loadingReplies && <span className="muted" style={{ fontSize: 12 }}>Loading replies…</span>}
+          {!loadingReplies && hasMoreReplies && (
+            <button
+              className="linklike"
+              style={{ alignSelf: "flex-start", fontSize: 12 }}
+              onClick={() => { loadReplies(); track("load_more_replies"); }}
+            >
+              Load more replies
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  ) : null;
 
   const save = async () => {
     if (!draft.trim()) return;
@@ -599,13 +718,17 @@ function CommentRow({
   // safe.)
   if (isDeletedComment(comment)) {
     return (
-      <div ref={ref} className={"msg" + (highlighted ? " highlight" : "")}>
-        <span className="muted">🗑️ comment deleted</span>
+      <div className="col" style={{ gap: 4, marginLeft: indent, borderLeft: depth > 0 ? "2px solid var(--border)" : undefined, paddingLeft: depth > 0 ? 8 : undefined }}>
+        <div ref={ref} className={"msg" + (highlighted ? " highlight" : "")}>
+          <span className="muted">🗑️ comment deleted</span>
+        </div>
+        {repliesBlock}
       </div>
     );
   }
 
   return (
+    <div className="col" style={{ gap: 4, marginLeft: indent, borderLeft: depth > 0 ? "2px solid var(--border)" : undefined, paddingLeft: depth > 0 ? 8 : undefined }}>
     <div ref={ref} className={"msg" + (removed ? " redacted" : "") + (highlighted ? " highlight" : "")}>
       {editing ? (
         <div className="col" style={{ gap: 4 }}>
@@ -656,6 +779,9 @@ function CommentRow({
         </button>
         <span className="muted">{new Date(comment.createdAt).toLocaleString()}</span>
         <span className="spacer" />
+        {isReal && !editing && (
+          <button className="linklike" onClick={() => setReplying((r) => !r)}>💬 reply</button>
+        )}
         {canManage && !editing && (
           <>
             <button className="linklike" onClick={() => { setDraft(comment.content ?? ""); setErr(null); setEditing(true); }}>✏️ edit</button>
@@ -669,11 +795,38 @@ function CommentRow({
       {/* surface a delete error that happens with the editor closed */}
       {!editing && err && <div className="error" style={{ marginTop: 4 }}>{err}</div>}
     </div>
+      {replying && (
+        <div className="col" style={{ marginLeft: 16 }}>
+          <Composer
+            onSubmit={postReply}
+            placeholder={`reply to @${comment.user?.username ?? "comment"}`}
+            submitLabel="Reply"
+            allowGif
+            analyticsTarget="comment"
+          />
+        </div>
+      )}
+      {repliesBlock}
+    </div>
   );
 }
 
-function Comments({ entityId, highlightCommentId, onPosted, onRemoved }: { entityId: string; highlightCommentId?: string; onPosted?: () => void; onRemoved?: () => void }) {
-  const cs = useCommentSectionData({ entityId, limit: 20 } as any) as any;
+// Comments moved from a bare useCommentSectionData() call to CommentSectionProvider + the
+// useCommentSection() consumer. This is NOT cosmetic: `useReplies` (which powers the nested reply
+// threads below) reads the shared `entityCommentsTree` out of CommentSectionContext, so replies and
+// the top-level list must come from ONE provider instance. Calling the data hook directly leaves
+// that context empty and `useReplies` dereferences `entityCommentsTree![commentId]` → TypeError.
+// Same provider-then-consume shape as EntityProvider/useEntity above.
+function Comments(props: { entityId: string; highlightCommentId?: string; onPosted?: () => void; onRemoved?: () => void }) {
+  return (
+    <CommentSectionProvider entityId={props.entityId} limit={20}>
+      <CommentsBody {...props} />
+    </CommentSectionProvider>
+  );
+}
+
+function CommentsBody({ entityId: _entityId, highlightCommentId, onPosted, onRemoved }: { entityId: string; highlightCommentId?: string; onPosted?: () => void; onRemoved?: () => void }) {
+  const cs = useCommentSection() as any;
   const { comments, newComments, loading, createComment, updateComment, deleteComment, loadMore, hasMore, sortBy, setSortBy, sortDir, setSortDir } = cs;
   const { user } = useUser() as any;
 
@@ -743,6 +896,7 @@ function Comments({ entityId, highlightCommentId, onPosted, onRemoved }: { entit
             key={c.id}
             comment={c}
             highlighted={!!highlightCommentId && c.id === highlightCommentId}
+            highlightCommentId={highlightCommentId}
             currentUserId={user?.id}
             onUpdate={updateComment}
             onDelete={deleteComment}
