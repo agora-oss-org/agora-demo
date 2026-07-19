@@ -133,6 +133,17 @@ export default function Composer({
                 onClick={() => {
                   handleMentionClick(u);
                   track("insert_mention", { target: analyticsTarget });
+                  // handleMentionClick rewrites `content` and refocuses the textarea
+                  // programmatically — none of onChange/onClick/onKeyUp fire for that, so
+                  // cursorPosition/isSelectionActive would keep their stale pre-insert values and
+                  // useUserMentions would keep matching a partial mention word forever, wedging
+                  // the dropdown open over the action row (GIF/Post become unclickable). The new
+                  // caret isn't on the DOM yet in this same handler (React hasn't committed the
+                  // content update or moved focus), so defer one frame and re-sync from the real
+                  // textarea once it has.
+                  requestAnimationFrame(() => {
+                    if (textareaRef.current) syncSelection(textareaRef.current);
+                  });
                 }}
               >
                 {u.name || u.username} <span className="muted">@{u.username}</span>
