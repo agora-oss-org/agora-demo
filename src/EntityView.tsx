@@ -349,32 +349,22 @@ function EntityEditor({
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState<string>(entity?.title ?? "");
-  const [content, setContent] = useState<string>(entity?.content ?? "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const save = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await onSave({ title: title.trim() || null, content: content.trim() || null });
-    } catch (e: any) {
-      setError(e?.message || "Failed to save changes");
-      setBusy(false);
-    }
-  };
 
   return (
     <div className="col">
       <strong>Edit entity</strong>
       <input placeholder="title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <textarea placeholder="content" rows={6} value={content} onChange={(e) => setContent(e.target.value)} />
-      {error && <div className="error">{error}</div>}
-      <div className="row">
-        <button onClick={onCancel} disabled={busy}>Cancel</button>
-        <span className="spacer" />
-        <button className="primary" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
-      </div>
+      <Composer
+        onSubmit={async ({ content }) => {
+          await onSave({ title: title.trim() || null, content: content.trim() || null });
+        }}
+        initialValue={entity?.content ?? ""}
+        placeholder="content"
+        submitLabel="Save"
+        rows={6}
+        analyticsTarget="entity"
+        onCancel={onCancel}
+      />
     </div>
   );
 }

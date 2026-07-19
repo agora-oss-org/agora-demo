@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateEntity } from "@agora-sdk/react-js";
 import { track } from "./analytics";
+import Composer from "./Composer";
 
 // Standalone "create an entity" form, routed to from the Feed (and from inside a space).
 // Uses useCreateEntity (→ POST /v7/:project/entities), which takes an optional `spaceId` so the
@@ -18,31 +19,21 @@ export default function CreateEntity({
 }) {
   const createEntity = useCreateEntity() as any;
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [images, setImages] = useState<File[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
+  const submit = async ({ content, mentions }: { content: string; mentions: any[] }) => {
     if (!content.trim() && !title.trim() && images.length === 0) return;
-    setBusy(true);
-    setError(null);
-    try {
-      // useCreateEntity switches to a multipart request when `images.files` is present, uploading
-      // each image and attaching the resulting file records to the new entity (entity.files).
-      await createEntity({
-        title: title || undefined,
-        content: content || undefined,
-        spaceId,
-        ...(images.length ? { images: { files: images } } : {}),
-      });
-      track("create_entity", { hasImage: images.length > 0, inSpace: !!spaceId });
-      onDone();
-    } catch (e: any) {
-      setError(e?.message || "Failed to create entity");
-    } finally {
-      setBusy(false);
-    }
+    // useCreateEntity switches to a multipart request when `images.files` is present, uploading
+    // each image and attaching the resulting file records to the new entity (entity.files).
+    await createEntity({
+      title: title || undefined,
+      content: content || undefined,
+      ...(mentions?.length ? { mentions } : {}),
+      spaceId,
+      ...(images.length ? { images: { files: images } } : {}),
+    });
+    track("create_entity", { hasImage: images.length > 0, inSpace: !!spaceId });
+    onDone();
   };
 
   return (
@@ -51,12 +42,6 @@ export default function CreateEntity({
       <div className="panel col">
         <strong>Create an entity{spaceName ? ` in 🏘️ ${spaceName}` : ""}</strong>
         <input placeholder="title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <textarea
-          placeholder="what's on your mind?"
-          rows={4}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
 
         <label className="muted">🖼 Images (optional)</label>
         <input
@@ -79,13 +64,14 @@ export default function CreateEntity({
           </div>
         )}
 
-        {error && <div className="error">{error}</div>}
-        <div className="row">
-          <span className="spacer" />
-          <button className="primary" disabled={busy} onClick={submit}>
-            {busy ? "Posting…" : "Post"}
-          </button>
-        </div>
+        <Composer
+          onSubmit={submit}
+          placeholder="what's on your mind?"
+          submitLabel="Create"
+          rows={4}
+          analyticsTarget="entity"
+          onCancel={onCancel}
+        />
       </div>
     </div>
   );
