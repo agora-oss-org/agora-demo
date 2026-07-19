@@ -71,6 +71,7 @@ export default function CreateEntity({
           rows={4}
           analyticsTarget="entity"
           onCancel={onCancel}
+          hasOtherContent={title.trim().length > 0 || images.length > 0}
         />
       </div>
     </div>

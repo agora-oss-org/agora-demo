@@ -30,7 +30,7 @@ export default function Composer({
   submitOnEnter = false,
   analyticsTarget,
   rows = 3,
-  hasAttachment = false,
+  hasOtherContent = false,
 }: {
   onSubmit: (data: ComposerSubmit) => Promise<void> | void;
   initialValue?: string;
@@ -43,10 +43,10 @@ export default function Composer({
   submitOnEnter?: boolean;
   analyticsTarget: "comment" | "entity" | "chat";
   rows?: number;
-  // Some callers (Chat.tsx's 📎 file picker) hold attachment state outside this component, so an
-  // otherwise-empty box can still be a valid, non-empty submission. The composer has no way to see
-  // that on its own — the caller must tell it.
-  hasAttachment?: boolean;
+  // Some callers hold content outside this component — Chat.tsx's 📎 file picker holds attachment
+  // state, CreateEntity.tsx holds a title + images — so an otherwise-empty box can still be a valid,
+  // non-empty submission. The composer has no way to see that on its own — the caller must tell it.
+  hasOtherContent?: boolean;
 }) {
   const [value, setValue] = useState(initialValue);
   const [gif, setGif] = useState<any>(null);
@@ -80,9 +80,9 @@ export default function Composer({
     setIsSelectionActive((el.selectionStart ?? 0) !== (el.selectionEnd ?? 0));
   }
 
-  // A GIF-only post (no text) is valid where GIFs are allowed; a file-only post is valid wherever
-  // the caller reports an outside attachment via hasAttachment.
-  const canSubmit = (value.trim().length > 0 || !!gif || hasAttachment) && !busy && !submitting;
+  // A GIF-only post (no text) is valid where GIFs are allowed; a submission with no text/gif is
+  // still valid wherever the caller reports other non-empty content via hasOtherContent.
+  const canSubmit = (value.trim().length > 0 || !!gif || hasOtherContent) && !busy && !submitting;
 
   const submit = async () => {
     if (!canSubmit) return;
