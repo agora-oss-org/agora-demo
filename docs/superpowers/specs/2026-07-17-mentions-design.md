@@ -1,5 +1,13 @@
 # @mention typeahead in composers + clickable mentions on display
 
+> **⚠️ SUPERSEDED** by `2026-07-19-composer-markdown-gif-design.md` (spec) /
+> `2026-07-19-composer-markdown-gif.md` (plan), which absorbs this work into a shared `Composer`
+> that also carries Markdown and GIPHY GIFs. Retained for the reasoning, not as a work item.
+>
+> **Correction:** this document states that `useUserMentions` is not re-exported by
+> `@agora-sdk/react-js`. That is wrong — `react-js/dist/esm/index.d.ts:2` is
+> `export * from "@agora-sdk/core"`, so it is. The "first direct core import" reasoning below is moot.
+
 **Date:** 2026-07-17
 **Status:** Approved design
 

@@ -167,6 +167,9 @@ header comment):
 | `UserProfile.tsx` / `ProfileViewer.tsx` / `ProfileViewerContext.ts` | `useFetchUser`, `useEntityList`, `useFollowManager`, `useRequestConnection` | read-only public profile of any user, shown in an app-wide portal overlay opened by `AuthorTag` |
 | `Feed.tsx` | `useEntityList` | list entities; routes to `CreateEntity` / `EntityView` |
 | `CreateEntity.tsx` | `useCreateEntity` | create an entity, optional `spaceId` + multipart image upload |
+| `Composer.tsx` | `useUserMentions` (from `@agora-sdk/react-js`) | the shared authoring surface for every composer: Markdown text, `@mention` typeahead, GIPHY GIF attach. Stays a plain `<textarea>` on purpose — `useUserMentions` tracks `selectionStart` on a flat string, which a contenteditable would break |
+| `MarkdownBody.tsx` / `markdown.ts` | — (display only) | renders `content` as sanitized Markdown (`marked` + `DOMPurify`, no `img`/`script`) and linkifies `@mentions` from the persisted `mentions` array to the profile overlay |
+| `GifPicker.tsx` | `GifData` (SDK model type) | GIPHY search/trending grid; produces the `GifData` persisted on `Comment.gif` / `ChatMessage.gif`. Lazy-loaded; hidden when no API key |
 | `EntityView.tsx` | `EntityProvider` + `useEntity`, `useReactionToggle`, `useCommentSectionData` | one entity: image display, owner inline edit, reactions, comments (with per-comment upvotes) |
 | `Spaces.tsx` / `SpaceView.tsx` | `useSpaceList`, `useEntityList`; `useFetchSpaceConversation`, `ConversationProvider` + `useConversationContext` | top-level spaces, then recurse into subspaces + space-scoped entries; **space chat** is a space-scoped instance of the same socket.io chat surface as `Chat.tsx` |
 | `Chat.tsx` | `useConversations`, `ConversationProvider` + `useConversationContext`, `useChatContext`, `useCreateDirectConversation`, `useConversationMembers` | the **💬 Chat** tab: non-encrypted realtime socket.io chat — groups + DMs, image/file attachments, group member management |
@@ -231,3 +234,21 @@ header comment):
   explicitly per tab + detail); product actions are events, fired **on success** with
   low-cardinality enums/booleans only — **never IDs or free text**. The reporting API key stays
   server-side (see the env split above).
+- **Composers are `Composer.tsx`, bodies are `MarkdownBody.tsx`.** Don't add a bare `<textarea>` for
+  new authoring surfaces. `allowGif` is only valid where the SDK model has a `gif` field — `Comment`
+  and `ChatMessage` have one, **`Entity` does not**. Markdown is authored as plain text and rendered
+  at display time; `content` stays a flat string on the wire, so no server contract changes.
+  `submitOnEnter` (default off) exists only for `Chat.tsx`, to preserve its old Enter-to-send
+  behavior — Shift+Enter still inserts a newline. **`hasOtherContent` (default `false`) is the prop
+  to check before adopting `Composer` on a new surface.** `Composer` owns the submit button and
+  disables it when its own textarea+GIF state looks empty — but chat has file attachments and
+  `CreateEntity` has a title and images, both living *outside* the composer, so a submission that's
+  valid at the surface level can look empty to `Composer` unless the caller reports that via
+  `hasOtherContent` (`Chat.tsx` passes `files.length > 0`; `CreateEntity.tsx` passes
+  `title.trim().length > 0 || images.length > 0`). Skipping this made file-only chat messages and
+  title-only/image-only posts briefly unsendable during implementation — audit what content lives
+  outside the composer on any new surface and wire this up, or the submit button silently jams.
+- The GIPHY key follows the same two-slot split as every other runtime value
+  (`AGORA_DEMO_GIPHY_API_KEY` at container start → `VITE_AGORA_GIPHY_API_KEY` baked fallback). It's a
+  client-side key, not a secret like `AGORA_UMAMI_API_KEY`, but it stays runtime-injected so the
+  published image ships keyless. Empty key → GIF button hidden, everything else works.
