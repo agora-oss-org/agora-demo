@@ -117,3 +117,7 @@ a { color: var(--accent); }
 /* .msg bubbles have their own padding; block children would double it. */
 .msg .md > :first-child { margin-top: 0; }
 .msg .md > :last-child { margin-bottom: 0; }
+
+/* Clickable @mentions inside rendered Markdown bodies. Matches the linklike utility. */
+.md .mention { color: var(--accent); cursor: pointer; }
+.md .mention:hover { text-decoration: underline; text-underline-offset: 3px; }
