@@ -8,6 +8,7 @@ import {
   useReactionToggle, useCommentSectionData, useCreateReport,
 } from "@agora-sdk/react-js";
 import { reportAndRemove } from "./operatorModeration";
+import MarkdownBody from "./MarkdownBody";
 
 // Report reasons. The SDK exposes only the ReportReasonKey *type* from its index, not the
 // runtime label map, so we mirror the labels here (kept in sync with @agora-sdk/core's
@@ -315,8 +316,9 @@ function Inner({ entityId, onBack, backLabel, highlightCommentId, highlightEntit
                 </>
               )}
             </div>
-            {/* preserve newlines/whitespace and wrap long unbroken strings so the full body shows */}
-            <div className="prewrap">{entity?.content}</div>
+            {/* Markdown-authored body → sanitized HTML (see markdown.ts). `breaks: true` preserves
+                single newlines, so this keeps the old prewrap behaviour. */}
+            <MarkdownBody content={entity?.content} mentions={entity?.mentions} />
             <EntityImages files={entity?.files} />
             {entity && <Reactions entityId={entityId} entity={entity} onRemoved={onRemoved} />}
           </>
@@ -633,7 +635,7 @@ function CommentRow({
       ) : (
         <>
           {comment.user && <AuthorTag user={comment.user} prefix="" />}
-          <div className="prewrap">{comment.content}</div>
+          <MarkdownBody content={comment.content} mentions={comment.mentions} />
         </>
       )}
       <div className="row" style={{ marginTop: 4 }}>

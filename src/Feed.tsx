@@ -4,6 +4,7 @@ import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill, A
 import CreateEntity from "./CreateEntity";
 import { track } from "./analytics";
 import { useModerationRefresh } from "./useModerationRefresh";
+import MarkdownBody from "./MarkdownBody";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
 // ranking algorithm per request (hot/decay/gravity/…).
@@ -57,7 +58,7 @@ export default function Feed() {
             <span className="spacer" />
             <AuthorTag user={e.user} />
           </div>
-          <div className="clamp3">{e.content}</div>
+          <MarkdownBody content={e.content} mentions={e.mentions} className="clamp3" />
           {(() => {
             const src = (e.files ?? []).map(fileImageSrc).find(Boolean);
             return src ? (

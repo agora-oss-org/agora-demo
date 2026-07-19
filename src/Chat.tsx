@@ -10,6 +10,7 @@ import {
   useConversationContext,
 } from "@agora-sdk/react-js";
 import { fileImageSrc } from "./EntityView";
+import MarkdownBody from "./MarkdownBody";
 import { track, trackPageView, PATHS } from "./analytics";
 
 // Realtime chat. The list comes from useConversations; the open thread is wrapped in
@@ -179,7 +180,7 @@ function Conversation({
         {/* SDK returns messages newest-first; reverse for chronological top-to-bottom display. */}
         {[...(messages ?? [])].reverse().map((m: any) => (
           <div key={m.id} className={"msg" + (m.userId === user?.id ? " mine" : "")}>
-            {m.content && <div className="prewrap">{m.content}</div>}
+            <MarkdownBody content={m.content} mentions={m.mentions} />
             <MessageFiles files={m.files} />
             <div className="muted">{m.userId === user?.id ? "you" : (m.userId?.slice(0, 8) || "system")} · {new Date(m.createdAt).toLocaleTimeString()}</div>
           </div>
