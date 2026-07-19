@@ -75,4 +75,4 @@ if (typeof window !== "undefined" && EMAIL_REDIRECT_TO) {
 // keyless and each deployment supplies its own. Empty → the GIF button is hidden and everything
 // else still works.
 export const GIPHY_API_KEY: string =
-  runtime.giphyApiKey || import.meta.env.VITE_GIPHY_API_KEY || "";
+  runtime.giphyApiKey || import.meta.env.VITE_AGORA_GIPHY_API_KEY || "";

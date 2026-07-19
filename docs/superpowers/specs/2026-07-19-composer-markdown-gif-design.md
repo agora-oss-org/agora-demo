@@ -230,7 +230,7 @@ permanently.
 - `docker-entrypoint.d/40-agora-config.sh` — `: "${AGORA_DEMO_GIPHY_API_KEY:=}"`, emitted as
   `giphyApiKey` in the `window.__AGORA__` heredoc
 - `src/config.ts` — `giphyApiKey?: string` on the `Window.__AGORA__` declaration, plus
-  `export const GIPHY_API_KEY: string = runtime.giphyApiKey || import.meta.env.VITE_GIPHY_API_KEY || ""`
+  `export const GIPHY_API_KEY: string = runtime.giphyApiKey || import.meta.env.VITE_AGORA_GIPHY_API_KEY || ""`
 - `.env.example` — documented in **both** the `VITE_*` and `AGORA_DEMO_*` sections
 - **No `Dockerfile` ARG and no CI build arg.**
 
@@ -298,7 +298,7 @@ rather than fresh sign-up, since email verification is unavailable locally.
 5. Clicking a rendered `@mention` opens the profile overlay.
 6. Rendered links carry `target="_blank" rel="noopener noreferrer nofollow"`.
 7. A `<script>` or `<img>` in content is stripped, not executed or fetched.
-8. Blank `VITE_GIPHY_API_KEY` → GIF button gone, nothing throws.
+8. Blank `VITE_AGORA_GIPHY_API_KEY` → GIF button gone, nothing throws.
 9. Long/tall GIF doesn't blow out the thread; feed `clamp3` still clamps.
 10. The recipient of a mention receives a notification.
 

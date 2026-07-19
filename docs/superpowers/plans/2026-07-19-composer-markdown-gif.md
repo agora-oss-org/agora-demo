@@ -88,7 +88,7 @@ In `src/config.ts`, after the `UMAMI_DEMO_ID` export, add:
 // keyless and each deployment supplies its own. Empty → the GIF button is hidden and everything
 // else still works.
 export const GIPHY_API_KEY: string =
-  runtime.giphyApiKey || import.meta.env.VITE_GIPHY_API_KEY || "";
+  runtime.giphyApiKey || import.meta.env.VITE_AGORA_GIPHY_API_KEY || "";
 ```
 
 - [ ] **Step 4: Add the runtime default to the nginx entrypoint**
@@ -113,7 +113,7 @@ In `.env.example`, in the `VITE_*` section near `VITE_AGORA_UMAMI_URL` (line ~38
 ```sh
 # GIPHY SDK key for the composer's GIF picker (client-side; get one at
 # https://developers.giphy.com/dashboard/). Empty → the GIF button is hidden.
-VITE_GIPHY_API_KEY=
+VITE_AGORA_GIPHY_API_KEY=
 ```
 
 And in the `AGORA_DEMO_*` section near `AGORA_DEMO_ADMIN_URL` (line ~67):
@@ -130,11 +130,11 @@ Expected: exits 0, no TypeScript errors.
 
 - [ ] **Step 7: Verify the key resolves at runtime**
 
-Set `VITE_GIPHY_API_KEY=test123` in `.env`, run `pnpm dev`, open http://localhost:5175, and in the browser console run:
+Set `VITE_AGORA_GIPHY_API_KEY=test123` in `.env`, run `pnpm dev`, open http://localhost:5175, and in the browser console run:
 
 ```js
 // Vite inlines this at dev-server start; confirms the fallback path works.
-console.log(import.meta.env.VITE_GIPHY_API_KEY)
+console.log(import.meta.env.VITE_AGORA_GIPHY_API_KEY)
 ```
 
 Expected: `test123`. Then blank it again in `.env`.
@@ -821,7 +821,7 @@ Expected: exits 0. If it fails on unused `text`/`busy`/`err`, remove those decla
 
 - [ ] **Step 6: Manual verification**
 
-Set a real `VITE_GIPHY_API_KEY` in `.env` (get one at https://developers.giphy.com/dashboard/), restart `pnpm dev`, then on an entity:
+Set a real `VITE_AGORA_GIPHY_API_KEY` in `.env` (get one at https://developers.giphy.com/dashboard/), restart `pnpm dev`, then on an entity:
 
 1. Type `**hi** @` plus the first letters of a seeded username → confirm the suggestion dropdown appears.
 2. Click a suggestion → confirm the textarea now reads `@username ` and the dropdown closes.
@@ -829,7 +829,7 @@ Set a real `VITE_GIPHY_API_KEY` in `.env` (get one at https://developers.giphy.c
 4. Post → confirm the comment shows bold text, the mention, and the GIF.
 5. **Reload the page** → confirm all three persist from the server. **If the GIF is missing after reload, the server is dropping `gif` on comment-create — stop and document it as a server bug; do not work around it client-side.**
 6. Post a GIF with no text at all → confirm it succeeds.
-7. Blank `VITE_GIPHY_API_KEY`, restart → confirm the GIF button is gone and commenting still works.
+7. Blank `VITE_AGORA_GIPHY_API_KEY`, restart → confirm the GIF button is gone and commenting still works.
 
 - [ ] **Step 7: Commit**
 
@@ -1292,7 +1292,7 @@ In `CLAUDE.md`'s "Conventions to match when editing" list, append:
   and `ChatMessage` have one, **`Entity` does not**. Markdown is authored as plain text and rendered
   at display time; `content` stays a flat string on the wire, so no server contract changes.
 - The GIPHY key follows the same two-slot split as every other runtime value
-  (`AGORA_DEMO_GIPHY_API_KEY` at container start → `VITE_GIPHY_API_KEY` baked fallback). It's a
+  (`AGORA_DEMO_GIPHY_API_KEY` at container start → `VITE_AGORA_GIPHY_API_KEY` baked fallback). It's a
   client-side key, not a secret like `AGORA_UMAMI_API_KEY`, but it stays runtime-injected so the
   published image ships keyless. Empty key → GIF button hidden, everything else works.
 ```
@@ -1322,7 +1322,7 @@ Run the spec's full manual checklist against a running server:
 5. Clicking a rendered `@mention` opens the profile overlay.
 6. Rendered links carry `target="_blank" rel="noopener noreferrer nofollow"`.
 7. `<script>` / `<img>` in content is stripped, not executed or fetched.
-8. Blank `VITE_GIPHY_API_KEY` → GIF button gone, nothing throws.
+8. Blank `VITE_AGORA_GIPHY_API_KEY` → GIF button gone, nothing throws.
 9. A tall GIF doesn't blow out a thread; feed `clamp3` still clamps.
 10. The mentioned user receives a notification.
 
