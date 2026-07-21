@@ -79,6 +79,29 @@ function readDeepLink(): DeepLink | null {
   const commentId = params.get("comment") || undefined;
   return { entityId, commentId };
 }
+// Captured at MODULE LOAD — once per page load, before React renders anything.
+//
+// This deliberately does NOT live in a useState initializer. SecureChatGate renders `children` in two
+// structurally different positions depending on `accessToken` (bare vs wrapped in SecureChatProvider),
+// so when the token rehydrates from storage just after first paint, React unmounts and REMOUNTS the
+// whole subtree — Shell included. A per-mount initializer would re-read the URL on that second mount,
+// by which time the effect below has already stripped the params, and the deep link would be silently
+// lost. Module scope outlives the remount; `consumeDeepLink()` is what ends its life instead.
+let pendingDeepLink: DeepLink | null = null;
+let deepLinkRead = false;
+function takePendingDeepLink(): DeepLink | null {
+  if (!deepLinkRead) {
+    pendingDeepLink = readDeepLink();
+    deepLinkRead = true;
+  }
+  return pendingDeepLink;
+}
+// Called when the moderator navigates away from the deep-linked entity, so a later remount doesn't
+// re-open what they just dismissed.
+function consumeDeepLink() {
+  pendingDeepLink = null;
+}
+
 function clearDeepLinkFromUrl() {
   const url = new URL(window.location.href);
   url.searchParams.delete("entity");
@@ -134,8 +157,9 @@ export default function Shell() {
     setTab(id);
   };
   // Capture any ?entity=…&comment=… deep link once, synchronously, before the effect strips it from
-  // the URL — so it survives the login round-trip if the moderator wasn't signed in yet.
-  const [deepLink, setDeepLink] = useState<DeepLink | null>(() => readDeepLink());
+  // the URL — so it survives both the login round-trip (if the moderator wasn't signed in yet) and
+  // the SecureChatGate remount when the access token rehydrates. See takePendingDeepLink above.
+  const [deepLink, setDeepLink] = useState<DeepLink | null>(() => takePendingDeepLink());
 
   // Strip the deep-link query params on load so a refresh won't re-open the entity.
   useEffect(() => {
@@ -186,7 +210,7 @@ export default function Shell() {
         entityId={deepLink.entityId}
         highlightCommentId={deepLink.commentId}
         highlightEntity={deepLink.highlightEntity}
-        onBack={() => { setDeepLink(null); setTab(deepLink.backTab ?? "feed"); }}
+        onBack={() => { consumeDeepLink(); setDeepLink(null); setTab(deepLink.backTab ?? "feed"); }}
         backLabel={deepLink.backLabel ?? "← back to demo"}
       />
     </div>
@@ -243,7 +267,7 @@ export default function Shell() {
   return (
     <ProfileViewerProvider
       currentUserId={user?.id}
-      onEditOwnProfile={() => { setDeepLink(null); setTab("profile"); }}
+      onEditOwnProfile={() => { consumeDeepLink(); setDeepLink(null); setTab("profile"); }}
     >
       {body}
     </ProfileViewerProvider>
