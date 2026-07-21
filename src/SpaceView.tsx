@@ -9,6 +9,7 @@ import {
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill } from "./EntityView";
 import CreateEntity from "./CreateEntity";
 import { track, trackPageView, PATHS } from "./analytics";
+import { ReactionPills } from "./reactions";
 
 // A single space: shows its subspaces (with a create-subspace form) and its entries (with the
 // standalone create-entity form). Recurses into subspaces via a nested <SpaceView>, so you can
@@ -228,8 +229,7 @@ export default function SpaceView({ space, onBack }: { space: any; onBack: () =>
             ) : null;
           })()}
           <div className="row" style={{ marginTop: 8 }}>
-            <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
-            <span className="pill">⬇ {e.reactionCounts?.downvote ?? 0}</span>
+            <ReactionPills counts={e.reactionCounts} />
             <span className="pill">💬 {e.repliesCount ?? 0}</span>
             <span className="spacer" />
             <span className="muted">open →</span>

@@ -5,8 +5,10 @@ import { useProfileViewer } from "./ProfileViewerContext";
 import { useModerationRefresh } from "./useModerationRefresh";
 import {
   EntityProvider, useEntity, useUser, useAuth,
-  useReactionToggle, CommentSectionProvider, useCommentSection, useFetchManyComments, useCreateReport,
+  useReactionToggle, useFetchEntityReactionsWrapper,
+  CommentSectionProvider, useCommentSection, useFetchManyComments, useCreateReport,
 } from "@agora-sdk/react-js";
+import { REACTIONS, reactionEmoji } from "./reactions";
 import { reportAndRemove } from "./operatorModeration";
 import MarkdownBody from "./MarkdownBody";
 import Composer from "./Composer";
@@ -510,27 +512,89 @@ function Reactions({ entityId, entity, onRemoved }: { entityId: string; entity: 
     initialReactionCounts: entity.reactionCounts,
   }) as any;
   const [err, setErr] = useState<string | null>(null);
+  // null = collapsed; "all" or one reaction type = the who-reacted panel's active filter.
+  const [whoFilter, setWhoFilter] = useState<string | null>(null);
   // The server gates reactions behind read access; if it rejects (e.g. access changed under us),
   // surface it instead of letting the optimistic toggle silently desync.
   const react = async (reactionType: string) => {
     setErr(null);
-    // Toggling the reaction you already hold clears it; otherwise it's an add (or a switch).
+    // One reaction per user per target (radio semantics): toggling the one you hold clears it;
+    // any other type is an add — or a *switch*, which silently clears the previous one.
     const action = currentReaction === reactionType ? "remove_reaction" : "add_reaction";
     try { await toggleReaction({ reactionType }); track(action, { type: reactionType, target: "entity" }); }
     catch (e: any) { setErr(e?.response?.data?.error || "Couldn't save your reaction."); }
   };
+  const openWho = (filter: string | null) => {
+    setWhoFilter(filter);
+    if (filter) track("view_reactions", { type: filter, target: "entity" });
+  };
   return (
-    <div className="row">
-      <button className={currentReaction === "upvote" ? "primary" : ""} disabled={loading} onClick={() => react("upvote")}>
-        ⬆ Upvote ({reactionCounts?.upvote ?? 0})
-      </button>
-      <button className={currentReaction === "downvote" ? "primary" : ""} disabled={loading} onClick={() => react("downvote")}>
-        ⬇ Downvote ({reactionCounts?.downvote ?? 0})
-      </button>
-      <span className="muted">your reaction: {currentReaction ?? "none"}</span>
-      {err && <span className="error">{err}</span>}
-      <span className="spacer" />
-      <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} onRemoved={onRemoved} />
+    <div className="col" style={{ gap: 6 }}>
+      <div className="row" style={{ flexWrap: "wrap" }}>
+        {REACTIONS.map((r) => (
+          <button
+            key={r.type}
+            className={currentReaction === r.type ? "primary" : ""}
+            aria-pressed={currentReaction === r.type}
+            title={r.label}
+            disabled={loading}
+            onClick={() => react(r.type)}
+          >
+            {r.emoji} {reactionCounts?.[r.type] ?? 0}
+          </button>
+        ))}
+        <button className="linklike" onClick={() => openWho(whoFilter ? null : "all")}>
+          {whoFilter ? "hide reactions" : "👀 who reacted"}
+        </button>
+        <span className="muted">your reaction: {currentReaction ?? "none"}</span>
+        {err && <span className="error">{err}</span>}
+        <span className="spacer" />
+        <ReportButton targetType="entity" targetId={entityId} ownerId={entity.userId} onRemoved={onRemoved} />
+      </div>
+      {whoFilter && <ReactorsPanel entityId={entityId} filter={whoFilter} onFilter={openWho} />}
+    </div>
+  );
+}
+
+// Who reacted: inline expandable panel under the reaction row (→ GET /entities/:id/reactions,
+// paginated, optional ?reactionType filter). Inline rather than a portal on purpose — it's scoped
+// to this one entity and preserves thread scroll, like the comment tree (the profile overlay is a
+// portal because it's app-wide). Reactor rows reuse AuthorTag, so each opens the profile overlay.
+function ReactorsPanel({
+  entityId, filter, onFilter,
+}: { entityId: string; filter: string; onFilter: (f: string) => void }) {
+  return (
+    <div className="card">
+      <div className="row" style={{ flexWrap: "wrap" }}>
+        {["all", ...REACTIONS.map((r) => r.type)].map((t) => (
+          <button key={t} className={filter === t ? "primary" : ""} title={t} onClick={() => onFilter(t)}>
+            {t === "all" ? "all" : reactionEmoji(t)}
+          </button>
+        ))}
+      </div>
+      {/* Keyed by filter so the wrapper hook's page/list state resets cleanly on a filter switch. */}
+      <ReactorsList key={filter} entityId={entityId} reactionType={filter === "all" ? undefined : filter} />
+    </div>
+  );
+}
+
+function ReactorsList({ entityId, reactionType }: { entityId: string; reactionType?: string }) {
+  const { reactions, loading, hasMore, loadMore } = useFetchEntityReactionsWrapper({
+    entityId, reactionType, limit: 20, autoFetch: true,
+  } as any) as any;
+  return (
+    <div className="col" style={{ gap: 4, marginTop: 8 }}>
+      {(reactions ?? []).map((r: any) => (
+        <div key={r.id} className="row">
+          <span>{reactionEmoji(r.reactionType)}</span>
+          <AuthorTag user={r.user} />
+          <span className="spacer" />
+          <span className="muted">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</span>
+        </div>
+      ))}
+      {loading && <div className="muted">Loading…</div>}
+      {!loading && (reactions?.length ?? 0) === 0 && <div className="muted">No reactions yet.</div>}
+      {hasMore && !loading && <button onClick={() => loadMore()}>Load more</button>}
     </div>
   );
 }

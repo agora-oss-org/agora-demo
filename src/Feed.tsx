@@ -5,6 +5,7 @@ import CreateEntity from "./CreateEntity";
 import { track } from "./analytics";
 import { useModerationRefresh } from "./useModerationRefresh";
 import MarkdownBody from "./MarkdownBody";
+import { ReactionPills } from "./reactions";
 
 // Lists entities via useEntityList (→ GET /v7/:project/entities). The sort dropdown switches the
 // ranking algorithm per request (hot/decay/gravity/…).
@@ -66,8 +67,7 @@ export default function Feed() {
             ) : null;
           })()}
           <div className="row" style={{ marginTop: 8 }}>
-            <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
-            <span className="pill">⬇ {e.reactionCounts?.downvote ?? 0}</span>
+            <ReactionPills counts={e.reactionCounts} />
             <span className="pill">💬 {e.repliesCount ?? 0}</span>
             <span className="spacer" />
             <span className="muted">open →</span>

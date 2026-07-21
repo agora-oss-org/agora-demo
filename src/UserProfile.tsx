@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useFetchUser, useEntityList, useFollowManager, useRequestConnection } from "@agora-sdk/react-js";
 import EntityView, { fileImageSrc, isModeratedOut, ModerationPill, PublicPill } from "./EntityView";
 import { track, trackPageView, PATHS } from "./analytics";
+import { ReactionPills } from "./reactions";
 
 // Public, read-only view of any user — opened from a clicked author name (AuthorTag → the
 // ProfileViewer overlay). useFetchUser({ userId }) returns the public-safe User (no email/secure
@@ -139,7 +140,7 @@ export default function UserProfile({
               </div>
               <div className="clamp3">{e.content}</div>
               <div className="row" style={{ marginTop: 6 }}>
-                <span className="pill">⬆ {e.reactionCounts?.upvote ?? 0}</span>
+                <ReactionPills counts={e.reactionCounts} />
                 <span className="pill">💬 {e.repliesCount ?? 0}</span>
               </div>
             </div>
