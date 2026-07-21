@@ -70,6 +70,11 @@ export default function SecureThread({
                onKeyDown={(e) => e.key === "Enter" && submit()} />
         <button className="primary" disabled={sending} onClick={submit}>Send 🔐</button>
       </div>
+      {/* Same hint as Composer's, minus `@mention` — mentions are deliberately absent here (the
+          typeahead would stream pre-encryption plaintext fragments to the server). */}
+      <span className="muted" style={{ fontSize: 12 }}>
+        **bold** _italic_ `code` · Markdown
+      </span>
     </div>
   );
 }
