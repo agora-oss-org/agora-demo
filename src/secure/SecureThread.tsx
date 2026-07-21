@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSecureMessages } from "@agora-sdk/secure-chat-react-js";
 import { track } from "../analytics";
 import SafetyNumberModal from "./SafetyNumberModal";
+import MarkdownBody from "../MarkdownBody";
 
 // Renders decrypted text for one secure conversation; messages that fail decryption fail CLOSED —
 // never raw bytes (see status handling below). SDK returns newest-first, so we reverse for display.
@@ -47,7 +48,13 @@ export default function SecureThread({
               {m.status === "ok" &&
                 (m.content?.deleted
                   ? <div className="muted">🗑️ message deleted</div>
-                  : <div className="prewrap">{m.content?.body}</div>)}
+                  // Markdown display is render-side only and fully local (sanitized, img/script
+                  // stripped — nothing fetched at view time), so it's safe on decrypted bodies.
+                  // Deliberately NO mentions array (secure messages don't persist one) and the
+                  // authoring input stays a bare <input> — Composer's mention typeahead would
+                  // stream pre-encryption plaintext fragments to the server, and GIFs would leak
+                  // third-party CDN fetches out of the E2EE envelope.
+                  : <MarkdownBody content={m.content?.body} />)}
               {m.status === "pending" && <div className="muted">⏳ waiting for key update…</div>}
               {m.status === "rejected" && (
                 <div className="error">⚠️ couldn't be verified{m.rejectedReason ? ` (${m.rejectedReason})` : ""}</div>
