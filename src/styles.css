@@ -45,8 +45,13 @@ a { color: var(--accent); }
 .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 /* The account/sign-out/admin cluster keeps to the right and wraps within itself when cramped. */
 .header .row { flex-wrap: wrap; justify-content: flex-end; }
-.brand { font-weight: 700; font-size: 20px; }
-.brand small { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+/* Wordmark + trailing text (Brand.tsx). Flex so the logo and the version line sit on one baseline;
+   wraps rather than overflowing on narrow screens. `gap` supplies the spacing the old
+   `.brand small { margin-left }` used to. */
+.brand { font-weight: 700; font-size: 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.brand small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.brand-logo { height: 34px; width: auto; display: block; }
+.brand-logo.large { height: 52px; }
 /* Tabs wrap to a new line rather than running off-screen (e.g. "Connections" getting clipped). */
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .tabs button.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }

@@ -3,6 +3,7 @@ import { useAuth, useUser } from "@agora-sdk/react-js";
 import { useAuthStatus, useSignOutEverywhere, useAuthSelfHeal, EmailVerificationHandler, PasswordResetHandler } from "@agora-sdk/auth-react-js";
 import * as secureChatCore from "@agora-sdk/secure-chat-core";
 import Login from "./Login";
+import Brand from "./Brand";
 import useTokenRefresh from "./useTokenRefresh";
 import { track, trackPageView, PATHS } from "./analytics";
 import { ProfileViewerProvider } from "./ProfileViewer";
@@ -182,7 +183,7 @@ export default function Shell() {
     return (
       <div className="center">
         <div className="panel login col">
-          <div className="brand">🏛️ Agora demo</div>
+          <Brand large><small>demo</small></Brand>
           <EmailVerificationHandler redirectTo="/" />
         </div>
       </div>
@@ -192,7 +193,7 @@ export default function Shell() {
     return (
       <div className="center">
         <div className="panel login col">
-          <div className="brand">🏛️ Agora demo</div>
+          <Brand large><small>demo</small></Brand>
           <PasswordResetHandler redirectTo="/?reset=1" />
         </div>
       </div>
@@ -217,7 +218,7 @@ export default function Shell() {
   ) : (
     <div className="app">
       <div className="header">
-        <div className="brand">🏛️ Agora <small>demo{APP_VERSION ? ` v${APP_VERSION}` : ""}{SECURE_CHAT_VERSION ? ` · secure-chat v${SECURE_CHAT_VERSION}` : ""} · @agora SDK → your Agora server</small></div>
+        <Brand><small>demo{APP_VERSION ? ` v${APP_VERSION}` : ""}{SECURE_CHAT_VERSION ? ` · secure-chat v${SECURE_CHAT_VERSION}` : ""} · @agora SDK → your Agora server</small></Brand>
         <div className="row">
           <button className="linklike" onClick={() => setTab("profile")} title="Edit profile">
             @{user?.username || user?.name || user?.id?.slice(0, 8)}

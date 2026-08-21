@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth, useRequestPasswordReset } from "@agora-sdk/react-js";
 import { ResendVerificationButton } from "@agora-sdk/auth-react-js";
 import { track } from "./analytics";
+import Brand from "./Brand";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "./config";
 
 // Email/password only, against the Agora server's /auth/sign-in (Supabase-backed identity, Agora
@@ -132,7 +133,7 @@ export default function Login() {
   if (mode === "reset") {
     return (
       <div className="panel login col">
-        <div className="brand">🏛️ Agora demo</div>
+        <Brand large><small>demo</small></Brand>
         <div className="muted">Reset your password</div>
         <input placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         {err && <div className="error">{err}</div>}
@@ -146,7 +147,7 @@ export default function Login() {
 
   return (
     <div className="panel login col">
-      <div className="brand">🏛️ Agora demo</div>
+      <Brand large><small>demo</small></Brand>
       <div className="muted">
         Welcome 👋 This is a <strong>reference implementation</strong> of the @agora SDK — every
         screen drives the real hooks against a live Agora server. Judge it on what it does, not how
