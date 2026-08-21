@@ -15,6 +15,10 @@
          entrypoint still resolves correctly. -->
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Served from public/ (copied to the dist root). Vite rewrites these for the relative `base`,
+         so they resolve against the <base href> above at any mount depth. -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Agora Demo</title>
   </head>
   <body>
